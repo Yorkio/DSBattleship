@@ -1,5 +1,4 @@
 from Tkinter import *
-from PIL import Image, ImageTk
 
 class Login(Frame):
     def __init__(self, root):
