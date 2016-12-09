@@ -33,7 +33,7 @@ class Board(Frame):
         boardName = Label(root, text='Your Shoots', fg='black', font=('times', 16))
         boardName.grid(row=0, column=1, pady=15)
 
-        # Create a shoot board cells
+        # Create a shoot board frame
         for i in xrange(self.size):
             for j in xrange(self.size):
                 cell = Label(shoot_panel, text=' ' * 10, bg='white')
