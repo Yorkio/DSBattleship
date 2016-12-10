@@ -1,5 +1,7 @@
 import uuid
 from Queue import Queue
+import pika
+import os
 
 class GameSession:
     def __init__(self, id):
