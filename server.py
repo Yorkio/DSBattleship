@@ -108,7 +108,6 @@ class Parser:
             if (len(subrequests) < 3):
                 return
             request_name = subrequests[1]
-            response = 0
             if (request_name in Players.keys()):
                 response = '0#0'
                 return response
@@ -122,17 +121,14 @@ class Parser:
             response_tail = ''
             numOfActiveGames = 0
             for game in GameSessions:
+                print game.state
                 if (game.state == 0):
-                    ++numOfActiveGames
+                    numOfActiveGames += 1
                     response_tail += str(game.id) + '#'
                     response_tail += str(game.size) + '#'
                     response_tail += str(len(game.players)) + '#'
             return response + str(numOfActiveGames) + '#' + response_tail
 
-game = Wait('Petya', 1)
-game.addPlayer('Vasya', 2)
-message = '0,1,3,0;2,3,4,1;5,5,1,1'
-game.addShipsOfPlayer(2, message)
 
 def on_request(ch, method, props, body):
     request = str(body)
