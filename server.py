@@ -12,10 +12,10 @@ channel.queue_declare(queue='rpc_queue')
 class GameSession:
     def __init__(self, login, ip):
         self.id = uuid.uuid4()
-        self.ships = []
         self.players = []
-        self.master_client = login
+        self.ships = []
         player = Player(login, ip)
+        self.master_client = login
         self.players.append(player)
         self.state = 0
         self.size = 10
