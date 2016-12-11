@@ -11,11 +11,11 @@ channel.queue_declare(queue='rpc_queue')
 class GameSession:
     def __init__(self, login, ip):
         self.id = uuid.uuid4()
-        self.players = []
+        self.players = {}
         self.ships = []
         player = Player(login, ip)
         self.master_client = login
-        self.players.append(player)
+        self.players[login] = player
         self.state = 0
         self.size = 10
 
@@ -38,7 +38,7 @@ class GameSession:
 class Wait(GameSession):
     def addPlayer(self, login, id):
         player = Player(login, id)
-        self.players.append(player)
+        self.players[login] = player
 
     def addShipsOfPlayer(self, id, message):
         ships = message.split(';')
@@ -59,9 +59,6 @@ class Wait(GameSession):
             self.ships.append(ship)
         return 0
 
-    def sendStats(self):
-        return 0
-
     def startGame(self):
         return 0
 
@@ -70,16 +67,54 @@ class Wait(GameSession):
 
 class Game(GameSession):
     def currentActivePlayers(self):
+        count = 0
+        for player in self.players:
+            if player.type == "Player":
+                count += 1
+        return count
+
+    def makeHit(self, login, coordinate):
+        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players
+        hit_conditions[login] = 3
+        for i in range(len(self.ships)):
+            if self.ships[i].owner_login != login and coordinate in self.ships[i].coordinates:
+                self.ships[i].coordinates.remove(coordinate)
+                if len(self.ships[i].coordinates) == 0:
+                    hit_conditions[self.ships[i].owner_login] = 2
+                else:
+                    hit_conditions[self.ships[i].owner_login] = 1
+        for player in self.players.keys():
+            if player not in hit_conditions.keys():
+                hit_conditions[player] = 0
         return 0
 
-    def makeHit(self):
-        return 0
-
-    def sendStats(self):
-        return 0
+    def sendStats(self, hit_conditions, correlation_IDs):
+        messages = dict.fromkeys(self.players.keys(), '')
+        for player in self.players.keys():          # 3# + 0 - this player wasn't hitted, 1 - this player wasn't hitted + # list of players which ships was sinked
+            if hit_conditions[player] == 0:
+                messages[player] += '3#0#'
+            elif hit_conditions[player] == 1:
+                messages[player] += '3#1#'
+        for player in hit_conditions:
+            if hit_conditions[player] == 2:
+                for p in self.players:
+                    messages[p] += player + ';'
+        for player in self.players.keys():
+            messages[player]  = messages[player][:len(messages[player]) - 1] + '#'
+        for player in self.players.keys():
+            response = messages[player]
+            correlation_id = correlation_IDs[player]
+            channel.basic_publish(exchange='',
+                                    routing_key='',
+                                    properties=pika.BasicProperties(correlation_id = correlation_id),
+                                    body=str(response))
 
     def checkEndGame(self):
-        return 0
+        owner = self.ships[0].owner_login
+        for i in range(1, len(self.ships)):
+            if self.ships[i].owner_login != owner:
+                return False
+        return True
 
 class Ship:
     def __init__(self, owner_login, length, coordinates):
@@ -123,16 +158,11 @@ class Parser:
             numOfActiveGames = 0
             for game in GameSessions:
                 if (game.state == 0):
-                    ++numOfActiveGames
+                    numOfActiveGames += 1
                     response_tail += str(game.id) + '#'
                     response_tail += str(game.size) + '#'
                     response_tail += str(len(game.players)) + '#'
             return response + str(numOfActiveGames) + '#' + response_tail
-
-game = Wait('Petya', 1)
-game.addPlayer('Vasya', 2)
-message = '0,1,3,0;2,3,4,1;5,5,1,1'
-game.addShipsOfPlayer(2, message)
 
 def on_request(ch, method, props, body):
     request = str(body)
