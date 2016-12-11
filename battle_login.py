@@ -1,9 +1,12 @@
 from Tkinter import *
 
+
 class Login(Frame):
     def __init__(self, root):
         self.root = root
-        self.initUI()
+        #self.initUI()
+        #self.get_nickname()
+        self.root.title("Battleships!")
 
     def initUI(self):
 
@@ -14,7 +17,6 @@ class Login(Frame):
             except TclError:
                 return
 
-        self.root.title("Battleships!")
 
         login_form = Frame(self.root)
         login_form.grid(row=0, column=0)
@@ -31,6 +33,27 @@ class Login(Frame):
         # Sample
         for item in ["one", "two", "three", "four"]:
             game_servers.insert(END, item)
+
+    def get_nickname(self):
+        nickname_form = Frame(self.root)
+        nickname_form.grid(row=0, column=0)
+
+        nickname_label = Label(nickname_form, text="Please, enter your nickname", font=('times', 12))
+        nickname_label.grid(row=0, column=0)
+
+        nickname_entry = Entry(nickname_form)
+        nickname_entry.grid(row=0, column=1, pady=5)
+
+        def check_nickname():
+            nickname = nickname_form.get()
+            if not nickname:
+                return
+            return nickname
+
+        nickname_button = Button(nickname_form, text='OK!', width=10, command=check_nickname)
+        nickname_button.grid(row=1, column=0, sticky=E + W, columnspan=2)
+
+
 
 
 root = Tk()
