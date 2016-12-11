@@ -16,7 +16,18 @@ class GameSession:
         player = Player(login, ip)
         self.master_client = login
         self.players.append(player)
+        self.state = 0
+        self.size = 10
 
+    def __init__(self, login, ip, size):
+        self.id = uuid.uuid4()
+        self.ships = []
+        self.players = []
+        self.master_client = login
+        player = Player(login, ip)
+        self.players.append(player)
+        self.state = 0
+        self.size = size
 
     def disconnect(self, player_id):
         return 0
@@ -83,7 +94,7 @@ class Player:
         self.score = 0
         self.type = 'Player'  # Spectator, Leaved
 
-
+Players = {}
 GameSessions = []
 
 class Parser:
@@ -92,11 +103,31 @@ class Parser:
         subrequests = request.split('#')
         if (len(subrequests) == 0):
             return
-        if (subrequests[0] == '1'):
-            response = 'ft'
-            for game in GameSessions:
-                response += '1'
+
+        if (subrequests[0] == '0'):
+            if (len(subrequests) < 3):
+                return
+            request_name = subrequests[1]
+            response = 0
+            if (request_name in Players.keys()):
+                response = '0#0'
+                return response
+            player_ip = subrequests[2]
+            Players[request_name] = Player(request_name, player_ip)
+            response = '0#1'
             return response
+
+        if (subrequests[0] == '1'):
+            response = '1#'
+            response_tail = ''
+            numOfActiveGames = 0
+            for game in GameSessions:
+                if (game.state == 0):
+                    ++numOfActiveGames
+                    response_tail += str(game.id) + '#'
+                    response_tail += str(game.size) + '#'
+                    response_tail += str(len(game.players)) + '#'
+            return response + str(numOfActiveGames) + '#' + response_tail
 
 game = Wait('Petya', 1)
 game.addPlayer('Vasya', 2)
