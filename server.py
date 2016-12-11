@@ -77,9 +77,6 @@ class Player:
 
 Players = {}
 GameSessions = []
-GameSessions.append(GameSession(1, 13))
-GameSessions.append(GameSession(2, 1124))
-print GameSessions[0].id
 
 class Parser:
     @staticmethod
