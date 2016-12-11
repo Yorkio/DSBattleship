@@ -1,7 +1,13 @@
 import uuid
 from Queue import Queue
 import pika
-import os
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(
+    host='127.0.0.1'))
+
+channel = connection.channel()
+
+channel.queue_declare(queue='rpc_queue')
 
 class GameSession:
     def __init__(self, id):
@@ -59,5 +65,37 @@ class Player:
         self.score = 0
         self.type = 'Player'  # Spectator, Leaved
 
-game = GameSession(1)
-print game.id
+
+GameSessions = []
+
+class Parser:
+    @staticmethod
+    def parse(request):
+        subrequests = request.split('#')
+        if (len(subrequests) == 0):
+            return
+        if (subrequests[0] == '1'):
+            response = 'ft'
+            for game in GameSessions:
+                response += '1'
+            return response
+
+
+
+def on_request(ch, method, props, body):
+    request = str(body)
+
+    response = Parser.parse(request)
+
+    ch.basic_publish(exchange='',
+                     routing_key=props.reply_to,
+                     properties=pika.BasicProperties(correlation_id = \
+                                                         props.correlation_id),
+                     body=str(response))
+    ch.basic_ack(delivery_tag = method.delivery_tag)
+
+channel.basic_qos(prefetch_count=1)
+channel.basic_consume(on_request, queue='rpc_queue')
+
+print(" [x] Awaiting RPC requests")
+channel.start_consuming()
