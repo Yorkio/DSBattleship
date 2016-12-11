@@ -13,8 +13,18 @@ class GameSession:
     def __init__(self, id):
         self.id = uuid.uuid4()
         self.ships = []
-        self.players = Queue()
+        self.players = []
         self.master_client_id = id
+        self.state = 0
+        self.size = 10
+
+    def __init__(self, id, size):
+        self.id = uuid.uuid4()
+        self.ships = []
+        self.players = []
+        self.master_client_id = id
+        self.state = 0
+        self.size = size
 
     def disconnect(self, player_id):
         return 0
@@ -59,14 +69,17 @@ class Ship:
         self.coordinates = []
 
 class Player:
-    def __init__(self, login, id):
-        self.id = id
+    def __init__(self, login, ip):
+        self.ip = ip
         self.login = login
         self.score = 0
         self.type = 'Player'  # Spectator, Leaved
 
-
+Players = {}
 GameSessions = []
+GameSessions.append(GameSession(1, 13))
+GameSessions.append(GameSession(2, 1124))
+print GameSessions[0].id
 
 class Parser:
     @staticmethod
@@ -74,11 +87,31 @@ class Parser:
         subrequests = request.split('#')
         if (len(subrequests) == 0):
             return
-        if (subrequests[0] == '1'):
-            response = 'ft'
-            for game in GameSessions:
-                response += '1'
+
+        if (subrequests[0] == '0'):
+            if (len(subrequests) < 3):
+                return
+            request_name = subrequests[1]
+            response = 0
+            if (request_name in Players.keys()):
+                response = '0#0'
+                return response
+            player_ip = subrequests[2]
+            Players[request_name] = Player(request_name, player_ip)
+            response = '0#1'
             return response
+
+        if (subrequests[0] == '1'):
+            response = '1#'
+            response_tail = ''
+            numOfActiveGames = 0
+            for game in GameSessions:
+                if (game.state == 0):
+                    ++numOfActiveGames
+                    response_tail += str(game.id) + '#'
+                    response_tail += str(game.size) + '#'
+                    response_tail += str(len(game.players)) + '#'
+            return response + str(numOfActiveGames) + '#' + response_tail
 
 
 
