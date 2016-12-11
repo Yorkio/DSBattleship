@@ -1,5 +1,4 @@
 import uuid
-from Queue import Queue
 import pika
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -37,12 +36,27 @@ class GameSession:
         return 0
 
 class Wait(GameSession):
-    def addPayer(self, login, id):
+    def addPlayer(self, login, id):
         player = Player(login, id)
-        self.players.put(player)
+        self.players.append(player)
 
-    def addShipsOfPlayer(self, id, ships):
-
+    def addShipsOfPlayer(self, id, message):
+        ships = message.split(';')
+        for i in range(len(ships)):
+            entity = ships[i].split(',')
+            x = int(entity[0])
+            y = int(entity[1])
+            length = int(entity[2])
+            direction = entity[3]       # 0 - horizontal, 1 - vertical
+            coordinates = []
+            if direction == '0':
+                for j in range(length):
+                    coordinates.append((x, y + j))
+            elif direction == '1':
+                for j in range(length):
+                    coordinates.append((x + j, y))
+            ship = Ship(id, length, coordinates)
+            self.ships.append(ship)
         return 0
 
     def sendStats(self):
@@ -68,9 +82,10 @@ class Game(GameSession):
         return 0
 
 class Ship:
-    def __init__(self, length, start, direction):
+    def __init__(self, owner_login, length, coordinates):
         self.length = length
-        self.coordinates = []
+        self.coordinates = coordinates
+        self.owner_login = owner_login
 
 class Player:
     def __init__(self, login, ip):
@@ -114,7 +129,10 @@ class Parser:
                     response_tail += str(len(game.players)) + '#'
             return response + str(numOfActiveGames) + '#' + response_tail
 
-
+game = Wait('Petya', 1)
+game.addPlayer('Vasya', 2)
+message = '0,1,3,0;2,3,4,1;5,5,1,1'
+game.addShipsOfPlayer(2, message)
 
 def on_request(ch, method, props, body):
     request = str(body)
