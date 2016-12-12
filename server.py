@@ -13,13 +13,12 @@ channel = connection.channel()
 channel.queue_declare(queue='rpc_queue_durable', durable = True)
 channel.queue_declare(queue='servers_queue', durable = True)
 
-
 def lifeCondition():
     time = 0.1
     response = str(serverID)
     channel.basic_publish(exchange='',
                                 routing_key='servers_queue',
-                                properties=pika.BasicProperties(delivery_mode=2, expiration=str(time * 1000)),
+                                properties=pika.BasicProperties(delivery_mode=2, expiration=str(int(time * 1000))),
                                 body=str(response))
     threading.Timer(time, lifeCondition).start()
 
