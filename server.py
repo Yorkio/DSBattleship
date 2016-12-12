@@ -4,25 +4,27 @@ import threading
 
 serverID = uuid.uuid1()
 
-
 connection = pika.BlockingConnection(pika.ConnectionParameters(
-    host='127.0.0.1', port = 5672))
+    host='127.0.0.1', port=5672))
 
 channel = connection.channel()
 
-channel.queue_declare(queue='rpc_queue_durable', durable = True)
-channel.queue_declare(queue='servers_queue', durable = True)
+channel.queue_declare(queue='rpc_queue_durable_' + str(serverID), durable=True)
+channel.queue_declare(queue='servers_queue', durable=True)
+
 
 def lifeCondition():
     time = 0.1
     response = str(serverID)
     channel.basic_publish(exchange='',
-                                routing_key='servers_queue',
-                                properties=pika.BasicProperties(delivery_mode=2, expiration=str(int(time * 1000))),
-                                body=str(response))
+                          routing_key='servers_queue',
+                          properties=pika.BasicProperties(delivery_mode=2, expiration=str(int(time * 1000))),
+                          body=str(response))
     threading.Timer(time, lifeCondition).start()
 
+
 lifeCondition()
+
 
 class GameSession:
     def __init__(self, login, size):
@@ -51,7 +53,7 @@ class GameSession:
             x = int(entity[0])
             y = int(entity[1])
             length = int(entity[2])
-            direction = entity[3]       # 0 - horizontal, 1 - vertical
+            direction = entity[3]  # 0 - horizontal, 1 - vertical
             coordinates = []
             if direction == '0':
                 for j in range(length):
@@ -78,7 +80,7 @@ class GameSession:
         return count
 
     def makeHit(self, login, coordinate):
-        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_id
+        hit_conditions = {}  # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_id
         hit_conditions[login] = 3
         for i in range(len(self.ships)):
             if self.ships[i].owner_login != login and coordinate in self.ships[i].coordinates:
@@ -112,7 +114,7 @@ class GameSession:
 
     def sendStats(self, hit_conditions):
         messages = dict.fromkeys(self.players, '')
-        for player in self.players:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
+        for player in self.players:  # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0:
                 messages[player] += '#4#0#'
             elif hit_conditions[player] == 1:
@@ -131,11 +133,10 @@ class GameSession:
                 response = '#4#2'
             correlation_id = player.cor_id
             channel.basic_publish(exchange='',
-                                    routing_key='rpc_queue_durable',
-                                    properties=pika.BasicProperties(correlation_id = correlation_id, delivery_mode=2,),
-                                    body=str(response))
+                                  routing_key='rpc_queue_durable',
+                                  properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
+                                  body=str(response))
         self.newRound()
-
 
     def checkEndGame(self):
         owner = self.ships[0].owner_login
@@ -144,11 +145,13 @@ class GameSession:
                 return False
         return True
 
+
 class Ship:
     def __init__(self, owner_login, length, coordinates):
         self.length = length
         self.coordinates = coordinates
         self.owner_login = owner_login
+
 
 class Player:
     def __init__(self, login, cor_id):
@@ -157,11 +160,13 @@ class Player:
         self.type = 'Player'  # Player, Spectator, Leaved
         self.corID = cor_id
 
+
 Players = {}
 CorrIDs = {}
 GameSessions = {}
 PlayerGame = {}
 clientNumOfShips = 5
+
 
 class Parser:
     @staticmethod
@@ -222,23 +227,23 @@ class Parser:
             game_session.addShipsOfPlayer(player_login, subrequests)
             return '3#1'
 
-          
-def on_request(ch, method, props, body):
 
+def on_request(ch, method, props, body):
     request = str(body)
 
     response = Parser.parse(request, props.correlation_id)
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
-                     properties=pika.BasicProperties(correlation_id = \
+                     properties=pika.BasicProperties(correlation_id= \
                                                          props.correlation_id,
-                                                     delivery_mode=2,),
+                                                     delivery_mode=2, ),
                      body=str(response))
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(on_request, queue='rpc_queue_durable')
+channel.basic_consume(on_request, queue='rpc_queue_durable_' + str(serverID))
 
 print(" [x] Awaiting RPC requests")
 channel.start_consuming()
