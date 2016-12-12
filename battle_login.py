@@ -6,17 +6,12 @@ import threading
 
 class Login(Frame):
     def __init__(self, root, server_id='127.0.0.1'):
-
         self.server_id = server_id
-
         self.client = Client(self.server_id)
-
         self.root = root
-
         self.root.title("Battleships!")
 
     def choose_server(self):
-
         avaliable_servers_frame = Frame(self.root)
         avaliable_servers_frame.grid(row=0, column=0)
 
@@ -26,13 +21,15 @@ class Login(Frame):
 
         def get_avaliable_servers():
             try:
-                self.client.listen_channel.start_consuming()
+                pass
+                #self.client.listen_channel.start_consuming()
             except TclError:
                 return
 
-        t = threading.Thread(target=get_avaliable_servers, args=())
-        t.setDaemon(True)
-        t.start()
+        #t = threading.Thread(target=get_avaliable_servers, args=())
+        #t.setDaemon(True)
+        #t.start()
+
 
     def set_board_size(self):
 

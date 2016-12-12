@@ -3,9 +3,6 @@ import uuid
 import pika
 import time
 
-
-
-
 class Client:
     def __init__(self, server_ip, type=0):
 

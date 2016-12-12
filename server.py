@@ -10,7 +10,7 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 
 channel = connection.channel()
 
-channel.queue_declare(queue='rpc_queue_durable', durable = True)
+channel.queue_declare(queue='rpc_queue_durable_' + str(serverID), durable = True)
 channel.queue_declare(queue='servers_queue', durable = True)
 
 def lifeCondition():
@@ -238,7 +238,7 @@ def on_request(ch, method, props, body):
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(on_request, queue='rpc_queue_durable')
+channel.basic_consume(on_request, queue='rpc_queue_durable_' + str(serverID))
 
 print(" [x] Awaiting RPC requests")
 channel.start_consuming()
