@@ -159,7 +159,8 @@ class Parser:
             if (subrequests[1] == '0'):
                 master_login = CorrIDs[cor_id]
                 game_size = subrequests[2]
-                GameSessions.append(GameSession(master_login, game_size))
+                newGame = GameSession(master_login, game_size)
+                GameSessions[newGame.id] = newGame
                 return '2#1'
             player_login = CorrIDs[cor_id]
             requested_game = subrequests[2]
