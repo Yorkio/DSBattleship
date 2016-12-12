@@ -1,5 +1,9 @@
 import uuid
 import pika
+import threading
+
+serverID = uuid.uuid1()
+
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
     host='127.0.0.1', port = 5672))
@@ -7,6 +11,19 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 channel = connection.channel()
 
 channel.queue_declare(queue='rpc_queue_durable', durable = True)
+channel.queue_declare(queue='servers_queue', durable = True)
+
+
+def lifeCondition():
+    time = 0.1
+    response = str(serverID)
+    channel.basic_publish(exchange='',
+                                routing_key='servers_queue',
+                                properties=pika.BasicProperties(delivery_mode=2, expiration=str(time * 1000)),
+                                body=str(response))
+    threading.Timer(time, lifeCondition).start()
+
+lifeCondition()
 
 class GameSession:
     def __init__(self, login, size):
@@ -22,6 +39,7 @@ class GameSession:
         return 0
 
     def leave(self, player_id):
+        self.players[player_id] = 'Leaved'
         return 0
 
 class Wait(GameSession):
@@ -29,7 +47,7 @@ class Wait(GameSession):
         self.players.append(login)
 
     def addShipsOfPlayer(self, id, message):
-        ships = message.split(';')
+        ships = message.split('#')
         for i in range(len(ships)):
             entity = ships[i].split(',')
             x = int(entity[0])
@@ -62,27 +80,29 @@ class Game(GameSession):
         return count
 
     def makeHit(self, login, coordinate):
-        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players
+        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_id
         hit_conditions[login] = 3
         for i in range(len(self.ships)):
             if self.ships[i].owner_login != login and coordinate in self.ships[i].coordinates:
                 self.ships[i].coordinates.remove(coordinate)
                 if len(self.ships[i].coordinates) == 0:
                     hit_conditions[self.ships[i].owner_login] = 2
+                    self.players[login].score += 2
                 else:
                     hit_conditions[self.ships[i].owner_login] = 1
+                    self.players[login].score += 1
         for player in self.players.keys():
-            if player not in hit_conditions.keys():
+            if player not in hit_conditions.keys() and self.players[player].type == 'Player':
                 hit_conditions[player] = 0
         return 0
 
     def sendStats(self, hit_conditions, correlation_IDs):
         messages = dict.fromkeys(self.players.keys(), '')
-        for player in self.players.keys():          # 3# + 0 - this player wasn't hitted, 1 - this player wasn't hitted + # list of players which ships was sinked
+        for player in self.players.keys():          # 3# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0:
-                messages[player] += '3#0#'
+                messages[player] += '#3#0#'
             elif hit_conditions[player] == 1:
-                messages[player] += '3#1#'
+                messages[player] += '#3#1#'
         for player in hit_conditions:
             if hit_conditions[player] == 2:
                 for p in self.players:
@@ -90,12 +110,17 @@ class Game(GameSession):
         for player in self.players.keys():
             messages[player]  = messages[player][:len(messages[player]) - 1] + '#'
         for player in self.players.keys():
-            response = messages[player]
+            response = ''
+            if self.players[player].type == 'Player':
+                response = messages[player]
+            elif self.players[player].type == 'Spectator':
+                response = '#3#2'
             correlation_id = correlation_IDs[player]
             channel.basic_publish(exchange='',
-                                    routing_key='',
+                                    routing_key='rpc_queue_durable',
                                     properties=pika.BasicProperties(correlation_id = correlation_id, delivery_mode=2,),
                                     body=str(response))
+
 
     def checkEndGame(self):
         owner = self.ships[0].owner_login
@@ -114,7 +139,7 @@ class Player:
     def __init__(self, login, cor_id):
         self.login = login
         self.score = 0
-        self.type  = 'Player'  # Spectator, Leaved
+        self.type = 'Player'  # Player, Spectator, Leaved
         self.corID = cor_id
 
 Players = {}
@@ -170,6 +195,7 @@ class Parser:
             return '2#1'
           
 def on_request(ch, method, props, body):
+
     request = str(body)
 
     response = Parser.parse(request, props.correlation_id)
