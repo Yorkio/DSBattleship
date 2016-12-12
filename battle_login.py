@@ -15,46 +15,85 @@ class Login(Frame):
 
         self.root.title("Battleships!")
 
+    def choose_server(self):
+
+        avaliable_servers_frame = Frame(self.root)
+        avaliable_servers_frame.grid(row=0, column=0)
+
+        avaliable_servers = Listbox(avaliable_servers_frame, width=20,
+                                    height=10, font=10, bg='ghost white', activestyle='none')
+        avaliable_servers.grid(row=1, column=0)
+
+        def get_avaliable_servers():
+            try:
+                self.client.listen_channel.start_consuming()
+            except TclError:
+                return
+
+        t = threading.Thread(target=get_avaliable_servers, args=())
+        t.setDaemon(True)
+        t.start()
+
+    def set_board_size(self):
+
+        board_size = Frame(self.root)
+        board_size.grid(row=0, column=0)
+
+        board_size_label = Label(board_size, text="Enter a board size", font=('times', 12))
+        board_size_label.grid(row=0, column=0)
+
+        board_size_entry = Entry(board_size)
+        board_size_entry.grid(row=0, column=1, pady=5)
+
+        def check_board_size():
+            board_size = board_size_entry.get()
+            try:
+                if 10 <= int(board_size) <= 40:
+                    self.root.destroy()
+                    self.client.set_type(1)
+                    self.client.send_type(None, board_size)
+                    root = Tk()
+                    board = Board(root, int(board_size), self.client)
+                    board.initShipBoard()
+                    board.initPositioning()
+                    root.mainloop()
+                else:
+                    tkMessageBox.showerror("Error!", "Board size must be less than 40 and bigger than 10 cells!")
+            except ValueError:
+                return
+
+        confirm_size = Button(board_size, text='OK!', command=check_board_size)
+        confirm_size.grid(row=1, column=0, sticky=W + E, columnspan=2)
     def initUI(self):
         # Return the chosen game server
         def choose_game():
             try:
-                return game_servers.get(game_servers.curselection())
+                session = game_servers.get(game_servers.curselection())
+                if "/" not in session:
+                    return
+                else:
+                    game_id, game_size = session.split("/")
+                    self.client.send_type(game_id)
+                    # self.root.destroy()
+                    # root = Tk()
+                    # board = Board(root, 10, self.client)
+                    # board.initShipBoard()
+                    # board.initPositioning()
+                    # root.mainloop()
+
             except TclError:
                 return
 
         login_form = Frame(self.root)
         login_form.grid(row=0, column=0)
 
-        def set_board_size(self):
-
-            board_size = Frame(self.root)
-            board_size.grid(row=0, column=0)
-
-            board_size_label = Label(board_size, text="Enter board size", font=('times', 12))
-            board_size_label.grid(row=0, column=0)
-
-            board_size_entry = Entry(board_size)
-            board_size_entry.grid(row=0, column=1, pady=5)
-
-            def check_board_size():
-                board_size = board_size_entry.get()
-                if 10 < board_size < 40:
-                    return board_size
-                else:
-                    tkMessageBox.showinfo("Error! Board size must be less than 40 and bigger than 10")
-
 
         def new_game():
             self.root.destroy()
-            self.client.set_type(1)
             root = Tk()
-            board = Board(root, 10, self.client)
-            board.initShipBoard()
-            board.initPositioning()
+            editor = Login(root)
+            editor.set_board_size()
             root.mainloop()
-
-
         create_game = Button(login_form, text='Create New Game!', width=20,
                              bg='light blue', font=('times', 14), command=new_game)
         create_game.grid(row=0, column=1)
@@ -65,17 +104,14 @@ class Login(Frame):
         game_servers = Listbox(login_form, width=20, height=10, font=10, bg='ghost white', activestyle='none')
         game_servers.grid(row=1, column=0)
 
-
-
         def get_game_sessions():
             try:
                 while True:
                     game_sessions = self.client.get_game_list()
                     if game_sessions:
                         for game_id, game_size in game_sessions:
-                            game_servers.insert(END, game_id + game_size)
+                            game_servers.insert(END, game_id + "/" + game_size)
                     else:
-                        print 'Lol'
                         game_servers.insert(END, "No active games!")
                     time.sleep(3)
                     game_servers.delete(0, END)
@@ -107,6 +143,5 @@ class Login(Frame):
 
 root = Tk()
 editor = Login(root)
-editor.get_nickname()
+editor.choose_server()
 root.mainloop()
-
