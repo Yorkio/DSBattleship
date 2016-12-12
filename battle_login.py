@@ -20,13 +20,53 @@ class Login(Frame):
         avaliable_servers_frame = Frame(self.root)
         avaliable_servers_frame.grid(row=0, column=0)
 
-        avaliable_servers = Listbox(avaliable_servers_frame, width=20,
-                                    height=10, font=10, bg='ghost white', activestyle='none')
+        avaliable_servers = Listbox(avaliable_servers_frame, width=40,
+                                    height=5, font=('times', 14), bg='ghost white', activestyle='none')
         avaliable_servers.grid(row=1, column=0)
+
+        server_label = Label(avaliable_servers_frame, text="Choose the server!",
+                             fg='purple3', font=('times', 14))
+        server_label.grid(row=0, column=0)
+
+        def choose_server():
+            try:
+                server_id = avaliable_servers.get(avaliable_servers.curselection())
+                self.client.set_server_id(server_id)
+                self.root.destroy()
+                root = Tk()
+                editor = Login(root)
+                editor.get_nickname()
+                root.mainloop()
+            except TclError:
+                return
+
+
+
+        server_select_button = Button(avaliable_servers_frame, text="OK!",
+                                      font=('times', 14), bg='ghost white', command=choose_server)
+        server_select_button.grid(row=2, column=0, sticky=W+E)
+
+
 
         def get_avaliable_servers():
             try:
-                self.client.listen_channel.start_consuming()
+                while True:
+                    server_list = []
+                    collision = 0
+                    while True:
+                        srv = self.client.get_server()
+                        if srv not in server_list:
+                            server_list.append(srv)
+                        else:
+                            if collision < 5:
+                                collision += 1
+                                continue
+                            elif collision == 5:
+                                for s in server_list:
+                                    avaliable_servers.insert(END, s)
+                                break
+                    time.sleep(5)
+                    avaliable_servers.delete(0, END)
             except TclError:
                 return
 

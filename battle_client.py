@@ -7,25 +7,32 @@ import time
 
 
 class Client:
-    def __init__(self, server_ip, type=0):
+    def __init__(self, server_id=None, type=0 , server_ip='127.0.0.1'):
 
         self.clientID = str(uuid.uuid1())
-
+        self.server_id = server_id
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=server_ip, port=5672))
-        self.channel = self.connection.channel()
-        result = self.channel.queue_declare(exclusive=True)
-        self.callback_queue = result.method.queue
-        self.channel.basic_consume(self.on_response, no_ack=True,
-                                   queue=self.callback_queue)
+
         self.type = type
 
         self.listen_channel = self.connection.channel()
         self.listen_channel.queue_declare(queue='servers_queue', durable=True)
-        self.listen_channel.basic_consume(self.callback,
+        self.listen_Gchannel.basic_consume(self.callback,
                               queue='servers_queue',
                               no_ack=True)
         self.server = None
+
+    def set_server_id(self, server_id):
+        self.server_id = server_id
+        self.channel = self.connection.channel()
+        result = self.channel.queue_declare(queue='rpc_queue_durable_' + server_id, exclusive=True, durable = True)
+        self.callback_queue = result.method.queue
+        self.channel.basic_consume(self.on_response, no_ack=True,
+                                   queue=result)
+
+    def get_server_id(self):
+        return self.server_id
 
     def set_type(self, type):
         self.type = type
@@ -38,8 +45,14 @@ class Client:
             self.response = body
 
     def callback(self, ch, method, properties, body):
-        print body
-        return body
+        self.server_name = body
+
+    def get_server(self):
+        self.server_name = None
+        while self.server_name is None:
+            self.connection.process_data_events()
+        return self.server_name
+
 
     def call(self, n):
         self.response = None
@@ -47,7 +60,7 @@ class Client:
         self.corr_id = self.clientID
 
         self.channel.basic_publish(exchange='',
-                                   routing_key='rpc_queue_durable',
+                                   routing_key='rpc_queue_durable_' + str(self.server_id),
                                    properties=pika.BasicProperties(
                                        reply_to=self.callback_queue,
                                        correlation_id=self.corr_id,
@@ -81,16 +94,3 @@ class Client:
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
 
-
-
-
-# client = Client("127.0.0.1")
-# name = raw_input("Enter the name")
-# while not client.check_name(name):
-#     print client.check_name(name)
-#     name = raw_input()
-#
-#
-# while True:
-#     time.sleep(3)
-#     print client.get_game_list()
