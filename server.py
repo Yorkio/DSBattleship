@@ -41,7 +41,6 @@ class GameSession:
         self.players[player_id] = 'Leaved'
         return 0
 
-class Wait(GameSession):
     def addPlayer(self, login):
         self.players.append(login)
 
@@ -69,7 +68,6 @@ class Wait(GameSession):
     def receiveStartGame(self):
         self.startGame()
 
-class Game(GameSession):
     def currentActivePlayers(self):
         count = 0
         for player in self.players:
@@ -89,30 +87,30 @@ class Game(GameSession):
                 else:
                     hit_conditions[self.ships[i].owner_login] = 1
                     self.players[login].score += 1
-        for player in self.players.keys():
+        for player in self.players:
             if player not in hit_conditions.keys() and self.players[player].type == 'Player':
                 hit_conditions[player] = 0
         return 0
 
     def sendStats(self, hit_conditions, correlation_IDs):
-        messages = dict.fromkeys(self.players.keys(), '')
-        for player in self.players.keys():          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
+        messages = dict.fromkeys(self.players, '')
+        for player in self.players:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0:
-                messages[player] += '#4#0#'
+                messages[player] += '4#0#'
             elif hit_conditions[player] == 1:
-                messages[player] += '#4#1#'
+                messages[player] += '4#1#'
         for player in hit_conditions:
             if hit_conditions[player] == 2:
                 for p in self.players:
                     messages[p] += player + ';'
-        for player in self.players.keys():
+        for player in self.players:
             messages[player]  = messages[player][:len(messages[player]) - 1] + '#'
-        for player in self.players.keys():
+        for player in self.players:
             response = ''
             if self.players[player].type == 'Player':
                 response = messages[player]
             elif self.players[player].type == 'Spectator':
-                response = '#4#2'
+                response = '4#2'
             correlation_id = correlation_IDs[player]
             channel.basic_publish(exchange='',
                                     routing_key='rpc_queue_durable',
@@ -200,6 +198,7 @@ class Parser:
             player_login = CorrIDs[cor_id]
             game_session = PlayerGame[cor_id]
             game_session.addShipsOfPlayer(player_login, subrequests)
+            return("3#1")
             
 
           
