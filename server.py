@@ -2,30 +2,19 @@ import uuid
 import pika
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
-    host='127.0.0.1'))
+    host='127.0.0.1', port = 5672))
 
 channel = connection.channel()
 
 channel.queue_declare(queue='rpc_queue_durable', durable = True)
 
 class GameSession:
-    def __init__(self, login):
-        self.id = uuid.uuid4()
-        self.players = {}
-        self.ships = []
-        player = Player(login)
-        self.master_client = login
-        self.players[login] = player
-        self.state = 0
-        self.size = 10
-
     def __init__(self, login, size):
         self.id = uuid.uuid4()
         self.ships = []
         self.players = []
         self.master_client = login
-        player = Player(login)
-        self.players.append(player)
+        self.players.append(login)
         self.state = 0
         self.size = size
 
@@ -36,9 +25,8 @@ class GameSession:
         return 0
 
 class Wait(GameSession):
-    def addPlayer(self, login, id):
-        player = Player(login, id)
-        self.players[login] = player
+    def addPlayer(self, login):
+        self.players.append(login)
 
     def addShipsOfPlayer(self, id, message):
         ships = message.split(';')
@@ -123,29 +111,32 @@ class Ship:
         self.owner_login = owner_login
 
 class Player:
-    def __init__(self, login):
+    def __init__(self, login, cor_id):
         self.login = login
         self.score = 0
-        self.type = 'Player'  # Spectator, Leaved
+        self.type  = 'Player'  # Spectator, Leaved
+        self.corID = cor_id
 
 Players = {}
-GameSessions = []
+CorrIDs = {}
+GameSessions = {}
 
 class Parser:
     @staticmethod
-    def parse(request):
+    def parse(request, cor_id):
         subrequests = request.split('#')
         if (len(subrequests) == 0):
             return
 
         if (subrequests[0] == '0'):
             if (len(subrequests) < 2):
-                return
+                return '0#0'
             request_name = subrequests[1]
             if (request_name in Players.keys()):
                 response = '0#0'
                 return response
-            Players[request_name] = Player(request_name)
+            Players[request_name] = Player(request_name, cor_id)
+            CorrIDs[cor_id] = request_name
             response = '0#1'
             return response
 
@@ -161,11 +152,27 @@ class Parser:
                     response_tail += str(game.size) + '#'
                     response_tail += str(len(game.players)) + '#'
             return response + str(numOfActiveGames) + '#' + response_tail
+
+        if (subrequests[0] == '2'):
+            if (len(subrequests) < 3):
+                return '2#0'
+            if (subrequests[1] == '0'):
+                master_login = CorrIDs[cor_id]
+                game_size = subrequests[2]
+                newGame = GameSession(master_login, game_size)
+                GameSessions[newGame.id] = newGame
+                return '2#1'
+            player_login = CorrIDs[cor_id]
+            requested_game = subrequests[2]
+            if (GameSessions[requested_game].state == 1):
+                return '2#0'
+            GameSessions[requested_game].addPlayer(player_login)
+            return '2#1'
           
 def on_request(ch, method, props, body):
     request = str(body)
 
-    response = Parser.parse(request)
+    response = Parser.parse(request, props.correlation_id)
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
@@ -176,7 +183,7 @@ def on_request(ch, method, props, body):
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(on_request, queue='rpc_queue')
+channel.basic_consume(on_request, queue='rpc_queue_durable')
 
 print(" [x] Awaiting RPC requests")
 channel.start_consuming()
