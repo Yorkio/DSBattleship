@@ -1,14 +1,17 @@
 from Tkinter import *
-
+from battle_client import *
+from ScrolledText import ScrolledText
 
 class Board(Frame):
-    def __init__(self, root, size):
+    def __init__(self, root, size, client):
+        self.client = client
         self.size = size
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
         self.initShipBoard()
-        #self.initShootBoard()
-        self.initPositioning()
+        self.initShootBoard()
+        #self.initPositioning()
+        self.initMessageBoard()
 
     def initShipBoard(self):
         self.root.title("Battleships!")
@@ -17,7 +20,7 @@ class Board(Frame):
         ship_board = Frame(self.root, background='black')
         ship_board.grid(row=1, column=0, padx=5)
 
-        boardName = Label(root, text='Your Board', fg='black', font=('times', 16))
+        boardName = Label(self.root, text='Your Board', fg='black', font=('times', 16))
         boardName.grid(row=0, column=0, pady=15)
 
         # Create a ship board cells
@@ -33,7 +36,7 @@ class Board(Frame):
         shoot_panel = Frame(self.root, background='black')
         shoot_panel.grid(row=1, column=1, padx=5)
 
-        boardName = Label(root, text='Your Shoots', fg='black', font=('times', 16))
+        boardName = Label(self.root, text='Your Shoots', fg='black', font=('times', 16))
         boardName.grid(row=0, column=1, pady=15)
 
         # Create a shoot board cells
@@ -43,6 +46,20 @@ class Board(Frame):
                 cell.grid(row=i, column=j, padx=1, pady=1)
                 cell.pack_propagate(0)
                 cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
+				
+    def initMessageBoard(self):
+        # Create message board label
+        message_board_name = Label(self.root, text='Message board', font=('times', 14))
+        message_board_name.grid(row=2, column=0, columnspan=2)
+
+        # Create message text with schrollbar
+        message_board = ScrolledText(self.root, width=45, height=10, undo=True)
+        message_board.grid(row=3, column=0, columnspan=2)
+
+        for m in range(1, 20):
+            message_board.insert(END, str(m)+'. ')
+            message_board.insert(END, 'Message itself')
+            message_board.insert(END, '\n------------------------\n')
 
 
     def setShip(self, i, j, event):
@@ -75,7 +92,9 @@ class Board(Frame):
 
             for _ in xrange(ships[ship]):
                 self.board[i][j + _].config(bg='green')
-            placement.append((i, j, ships[ship], direction))
+            plc = (i, j, ships[ship], direction)
+            for pl in plc:
+                placement.append(str(pl))
             ship += 1
             self.current_ship_label.config(text=types[ship])
 
@@ -85,12 +104,15 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 if not check_square(i + _, j):
                     return
-
-
             for _ in xrange(ships[ship]):
                 self.board[i + _][j].config(bg='green')
+            plc = (i, j, ships[ship], direction)
+            for pl in plc:
+                placement.append(str(pl))
             ship += 1
             self.current_ship_label.config(text=types[ship])
+        if ship == len(ships):
+            self.confirm_choice.config(state="normal")
 
 
     def shoot(self, i, j, event):
@@ -136,6 +158,7 @@ class Board(Frame):
         self.current_ship_label.grid(row=1, column=2, sticky=N)
 
         def reset_ships():
+            self.confirm_choice.config(state="disabled")
             global placement
             global ship
             ship = 0
@@ -153,9 +176,22 @@ class Board(Frame):
         reset_ships = Button(self.root, text="OK", width=10, command=reset_ships)
         reset_ships.grid(row=1, column=3, sticky=N)
 
+        def start_game():
+            ships_coordinates = map(str, placement)
+            while True:
+                time.sleep(5)
+                send_coordinates = self.client.send_ships(ships_coordinates)
+                if send_coordinates:
+                    self.initShipBoard()
+                    self.initShootBoard()
+                    break
 
+        self.confirm_choice = Button(self.root, text="Start game",
+                                fg='purple3', font=('times', 12), state=DISABLED, command=start_game)
+
+        self.confirm_choice.grid(row=2, column=1, sticky=E + W, columnspan=3)
+
+#
 # root = Tk()
 # editor = Board(root, 10)
 # root.mainloop()
-
-
