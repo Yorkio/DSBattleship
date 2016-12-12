@@ -4,8 +4,6 @@ import threading
 
 serverID = uuid.uuid1()
 
-print serverID
-
 connection = pika.BlockingConnection(pika.ConnectionParameters(
     host='127.0.0.1', port=5672))
 
