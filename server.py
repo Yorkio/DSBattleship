@@ -6,25 +6,25 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 
 channel = connection.channel()
 
-channel.queue_declare(queue='rpc_queue')
+channel.queue_declare(queue='rpc_queue_durable', durable = True)
 
 class GameSession:
-    def __init__(self, login, ip):
+    def __init__(self, login):
         self.id = uuid.uuid4()
         self.players = {}
         self.ships = []
-        player = Player(login, ip)
+        player = Player(login)
         self.master_client = login
         self.players[login] = player
         self.state = 0
         self.size = 10
 
-    def __init__(self, login, ip, size):
+    def __init__(self, login, size):
         self.id = uuid.uuid4()
         self.ships = []
         self.players = []
         self.master_client = login
-        player = Player(login, ip)
+        player = Player(login)
         self.players.append(player)
         self.state = 0
         self.size = size
@@ -106,7 +106,7 @@ class Game(GameSession):
             correlation_id = correlation_IDs[player]
             channel.basic_publish(exchange='',
                                     routing_key='',
-                                    properties=pika.BasicProperties(correlation_id = correlation_id),
+                                    properties=pika.BasicProperties(correlation_id = correlation_id, delivery_mode=2,),
                                     body=str(response))
 
     def checkEndGame(self):
@@ -123,8 +123,7 @@ class Ship:
         self.owner_login = owner_login
 
 class Player:
-    def __init__(self, login, ip):
-        self.ip = ip
+    def __init__(self, login):
         self.login = login
         self.score = 0
         self.type = 'Player'  # Spectator, Leaved
@@ -140,14 +139,13 @@ class Parser:
             return
 
         if (subrequests[0] == '0'):
-            if (len(subrequests) < 3):
+            if (len(subrequests) < 2):
                 return
             request_name = subrequests[1]
             if (request_name in Players.keys()):
                 response = '0#0'
                 return response
-            player_ip = subrequests[2]
-            Players[request_name] = Player(request_name, player_ip)
+            Players[request_name] = Player(request_name)
             response = '0#1'
             return response
 
@@ -172,7 +170,8 @@ def on_request(ch, method, props, body):
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
                      properties=pika.BasicProperties(correlation_id = \
-                                                         props.correlation_id),
+                                                         props.correlation_id,
+                                                     delivery_mode=2,),
                      body=str(response))
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
