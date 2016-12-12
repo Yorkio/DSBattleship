@@ -85,13 +85,14 @@ class GameSession:
                 self.ships[i].coordinates.remove(coordinate)
                 if len(self.ships[i].coordinates) == 0:
                     hit_conditions[self.ships[i].owner_login] = 2
-                    self.players[login].score += 2
+                    Players[login].score += 2
                 else:
                     hit_conditions[self.ships[i].owner_login] = 1
-                    self.players[login].score += 1
-        for player in self.players.keys():
-            if player not in hit_conditions.keys() and self.players[player].type == 'Player':
+                    Players[login].score += 1
+        for player in self.players:
+            if player not in hit_conditions.keys() and Players[player].type == 'Player':
                 hit_conditions[player] = 0
+        self.sendStats(hit_conditions)
         return 0
 
     def newRound(self):
@@ -109,11 +110,9 @@ class GameSession:
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
 
-
-
     def sendStats(self, hit_conditions):
-        messages = dict.fromkeys(self.players.keys(), '')
-        for player in self.players.keys():          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
+        messages = dict.fromkeys(self.players, '')
+        for player in self.players:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0:
                 messages[player] += '#4#0#'
             elif hit_conditions[player] == 1:
@@ -122,13 +121,13 @@ class GameSession:
             if hit_conditions[player] == 2:
                 for p in self.players:
                     messages[p] += player + ';'
-        for player in self.players.keys():
-            messages[player]  = messages[player][:len(messages[player]) - 1] + '#'
-        for player in self.players.keys():
+        for player in self.players:
+            messages[player] = messages[player][:len(messages[player]) - 1] + '#'
+        for player in self.players:
             response = ''
-            if self.players[player].type == 'Player':
+            if Players[player].type == 'Player':
                 response = messages[player]
-            elif self.players[player].type == 'Spectator':
+            elif Players[player].type == 'Spectator':
                 response = '#4#2'
             correlation_id = player.cor_id
             channel.basic_publish(exchange='',
@@ -216,7 +215,7 @@ class Parser:
 
         if (subrequests[0] == '3'):
             subrequests.remove(subrequests.index(0))
-            if (len(subrequests) != clientNumOfShips)
+            if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
             game_session = PlayerGame[cor_id]
