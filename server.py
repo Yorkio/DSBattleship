@@ -45,8 +45,7 @@ class Wait(GameSession):
     def addPlayer(self, login):
         self.players.append(login)
 
-    def addShipsOfPlayer(self, id, message):
-        ships = message.split('#')
+    def addShipsOfPlayer(self, id, ships):
         for i in range(len(ships)):
             entity = ships[i].split(',')
             x = int(entity[0])
@@ -97,11 +96,11 @@ class Game(GameSession):
 
     def sendStats(self, hit_conditions, correlation_IDs):
         messages = dict.fromkeys(self.players.keys(), '')
-        for player in self.players.keys():          # 3# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
+        for player in self.players.keys():          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0:
-                messages[player] += '#3#0#'
+                messages[player] += '#4#0#'
             elif hit_conditions[player] == 1:
-                messages[player] += '#3#1#'
+                messages[player] += '#4#1#'
         for player in hit_conditions:
             if hit_conditions[player] == 2:
                 for p in self.players:
@@ -113,7 +112,7 @@ class Game(GameSession):
             if self.players[player].type == 'Player':
                 response = messages[player]
             elif self.players[player].type == 'Spectator':
-                response = '#3#2'
+                response = '#4#2'
             correlation_id = correlation_IDs[player]
             channel.basic_publish(exchange='',
                                     routing_key='rpc_queue_durable',
