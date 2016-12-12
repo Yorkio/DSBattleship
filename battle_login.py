@@ -1,8 +1,8 @@
 from Tkinter import *
 from battle_client import *
 from battle_board import *
-import threading
 import tkMessageBox
+import threading
 
 class Login(Frame):
     def __init__(self, root, server_id='127.0.0.1'):
@@ -64,7 +64,6 @@ class Login(Frame):
 
         confirm_size = Button(board_size, text='OK!', command=check_board_size)
         confirm_size.grid(row=1, column=0, sticky=W + E, columnspan=2)
-
     def initUI(self):
         # Return the chosen game server
         def choose_game():
@@ -95,7 +94,6 @@ class Login(Frame):
             editor = Login(root)
             editor.set_board_size()
             root.mainloop()
-
         create_game = Button(login_form, text='Create New Game!', width=20,
                              bg='light blue', font=('times', 14), command=new_game)
         create_game.grid(row=0, column=1)
