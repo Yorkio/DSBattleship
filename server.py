@@ -143,6 +143,7 @@ class Player:
 Players = {}
 CorrIDs = {}
 GameSessions = {}
+PlayerGame = {}
 
 class Parser:
     @staticmethod
@@ -184,13 +185,23 @@ class Parser:
                 game_size = subrequests[2]
                 newGame = GameSession(master_login, game_size)
                 GameSessions[newGame.id] = newGame
+                PlayerGame[cor_id] = newGame.id
                 return '2#1'
             player_login = CorrIDs[cor_id]
             requested_game = subrequests[2]
             if (GameSessions[requested_game].state == 1):
                 return '2#0'
             GameSessions[requested_game].addPlayer(player_login)
+            PlayerGame[cor_id] = requested_game.id
             return '2#1'
+
+        if (subrequests[0] == '3'):
+            subrequests.remove(subrequests.index(0))
+            player_login = CorrIDs[cor_id]
+            game_session = PlayerGame[cor_id]
+            game_session.addShipsOfPlayer(player_login, subrequests)
+            
+
           
 def on_request(ch, method, props, body):
 
