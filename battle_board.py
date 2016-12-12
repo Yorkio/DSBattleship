@@ -1,6 +1,6 @@
 from Tkinter import *
 from battle_client import *
-
+from ScrolledText import ScrolledText
 
 class Board(Frame):
     def __init__(self, root, size, client):
