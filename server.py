@@ -77,23 +77,6 @@ class GameSession:
                 count += 1
         return count
 
-    def makeHit(self, login, coordinate):
-        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_id
-        hit_conditions[login] = 3
-        for i in range(len(self.ships)):
-            if self.ships[i].owner_login != login and coordinate in self.ships[i].coordinates:
-                self.ships[i].coordinates.remove(coordinate)
-                if len(self.ships[i].coordinates) == 0:
-                    hit_conditions[self.ships[i].owner_login] = 2
-                    Players[login].score += 2
-                else:
-                    hit_conditions[self.ships[i].owner_login] = 1
-                    Players[login].score += 1
-        for player in self.players:
-            if player not in hit_conditions.keys() and Players[player].type == 'Player':
-                hit_conditions[player] = 0
-        self.sendStats(hit_conditions)
-        return 0
 
     def newRound(self):
         self.curActive += 1
@@ -110,26 +93,66 @@ class GameSession:
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
 
-    def sendStats(self, hit_conditions):
-        messages = dict.fromkeys(self.players, '')
-        for player in self.players:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
-            if hit_conditions[player] == 0:
-                messages[player] += '#4#0#'
-            elif hit_conditions[player] == 1:
-                messages[player] += '#4#1#'
-        for player in hit_conditions:
-            if hit_conditions[player] == 2:
-                for p in self.players:
-                    messages[p] += player + ';'
+    def makeHit(self, login, coordinate):
+        hit_conditions = {}    # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_id
+        hit_conditions[login] = 3
+        hitted_players = []
+        sinked_players = []
+        for i in range(len(self.ships)):
+            if self.ships[i].owner_login != login and coordinate in self.ships[i].coordinates:
+                self.ships[i].coordinates.remove(coordinate)
+                if len(self.ships[i].coordinates) == 0:
+                    self.ships.remove(self.ships[i])
+                    hit_conditions[self.ships[i].owner_login] = 2
+                    sinked_players.append(self.ships[i].owner_login)
+                    Players[login].score += 2
+                else:
+                    hit_conditions[self.ships[i].owner_login] = 1
+                    hitted_players.append(self.ships[i].owner_login)
+                    Players[login].score += 1
         for player in self.players:
-            messages[player] = messages[player][:len(messages[player]) - 1] + '#'
+            if player not in hit_conditions.keys() and Players[player].type == 'Player':
+                hit_conditions[player] = 0
+        if self.checkEndGame():
+            response = 'Congratulations, you won!!!'
+            correlation_id = Players[login].corID
+            channel.basic_publish(exchange='',
+                                  routing_key='rpc_queue_durable',
+                                  properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
+                                  body=str(response))
+            return
+        self.sendStats(hit_conditions, hitted_players, sinked_players)
+
+    def sendStats(self, hit_conditions, hitted_players, sinked_players):
+        messages = dict.fromkeys(self.players, '')
+        hitter = ''
+        for player in self.players:
+            messages[player] += '4#'
+            if hit_conditions[player] == 3:
+                hitter = player
+        for player in hit_conditions:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
+            if hit_conditions[player] == 0:
+                messages[player] += '0#'
+            elif hit_conditions[player] == 1 or hit_conditions[player] == 2:
+                messages[player] += '1#' + hitter + '#'
+        for player in self.players:
+            for p in sinked_players:
+                messages[player] += p + ';'
+            messages[player] = messages[player][:len(messages[player]) - 1]
         for player in self.players:
             response = ''
             if Players[player].type == 'Player':
                 response = messages[player]
             elif Players[player].type == 'Spectator':
-                response = '#4#2'
-            correlation_id = player.cor_id
+                response = '2#'
+                for i in range(len(hitted_players)):
+                    response += player + ';'
+                messages[player] = messages[player][:len(messages[player]) - 1] + '#'
+                for i in range(len(sinked_players)):
+                    response += player + ';'
+                messages[player] = messages[player][:len(messages[player]) - 1]
+
+            correlation_id = Players[player].corID
             channel.basic_publish(exchange='',
                                     routing_key='rpc_queue_durable',
                                     properties=pika.BasicProperties(correlation_id = correlation_id, delivery_mode=2,),
