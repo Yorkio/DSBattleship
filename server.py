@@ -120,14 +120,6 @@ class GameSession:
         for player in self.players:
             if player not in hit_conditions.keys() and Players[player].type == 'Player':
                 hit_conditions[player] = 0
-        if self.checkEndGame():
-            response = '6' # Congrat
-            correlation_id = Players[login].corID
-            channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable_' + str(serverID),
-                                  properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
-                                  body=str(response))
-            return
         self.sendStats(hit_conditions, hitted_players, sinked_players)
 
     def sendStats(self, hit_conditions, hitted_players, sinked_players):
@@ -257,10 +249,24 @@ class Parser:
             GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
 
+        if (subrequests[0] == '6'):
+            game_session = PlayerGame[cor_id]
+            if GameSessions[game_session].checkEndGame() == True:
+                owner = GameSessions[game_session].ships[0].owner_login
+                return '6#' + owner
+            return '6#0'
+
         if (subrequests[0] == '7'):
             game_session = PlayerGame[cor_id]
             number = len(GameSessions[game_session].players)
             return '7#' + str(number)
+
+        if (subrequests[0] == '8'):
+            game_session = PlayerGame[cor_id]
+            if cor_id == Players[GameSessions[game_session].master_client].corID:
+                GameSessions[game_session].startGame()
+                return '8#1'
+            return '8#0'
 
 
 def on_request(ch, method, props, body):
