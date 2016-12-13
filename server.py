@@ -71,6 +71,7 @@ class GameSession:
         return 0
 
     def startGame(self):
+        self.state = 1
         self.newRound()
         return 0
 
@@ -257,6 +258,7 @@ class Parser:
             game_session = PlayerGame[cor_id]
             if GameSessions[game_session].checkEndGame() == True:
                 owner = GameSessions[game_session].ships[0].owner_login
+                ships = []
                 return '6#' + owner
             return '6#0'
 
