@@ -1,9 +1,4 @@
 .idea
-battle_board.py
-battle_client.py
-battle_login.py
-battle_parser.py
 battle_ship.py
 foo_client.py
 ships_generator.py
-
