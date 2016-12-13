@@ -1,6 +1,6 @@
 from Tkinter import *
 from battle_client import *
-
+import threading
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -8,9 +8,10 @@ class Board(Frame):
         self.size = size
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
-        #self.initShipBoard()
-        #self.initShootBoard()
-        #self.initPositioning()
+
+
+    def check_client_type(self):
+        return self.client.get_type()
 
     def initShipBoard(self):
         self.root.title("Battleships!")
@@ -46,7 +47,8 @@ class Board(Frame):
                 cell.pack_propagate(0)
                 cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
 
-    #def send_positions(self):
+        self.current_players_info = Label(self.root, text='Current Players: ')
+        self.current_players_info.grid(row=0, column=2)
 
 
     def setShip(self, i, j, event):
@@ -107,10 +109,9 @@ class Board(Frame):
         if ship == len(ships):
             self.confirm_choice.config(state="normal")
 
-
     def shoot(self, i, j, event):
         event.widget.config(bg='grey')
-        print i, j
+
 
     def initPositioning(self):
         global k
@@ -125,30 +126,34 @@ class Board(Frame):
         global ship
         ship = 0
 
-        direction_label = Label(self.root, text='Set direction')
-        direction_label.grid(row=0, column=1, padx=5, sticky=S)
+        self.direction_label = Label(self.root, text='Set direction')
+        self.direction_label.grid(row=0, column=1, padx=5, sticky=S)
 
         # Set the direction of the  ship
+
+
         def change_direction():
             global k, direction
             k += 1
 
             if k % 2 == 0:
-                set_direction.config(text='Horizontally')
+                self.set_direction.config(text='Horizontally')
                 direction = 0
             else:
-                set_direction.config(text='Vertically')
+                self.set_direction.config(text='Vertically')
                 direction = 1
 
-        set_direction = Button(self.root, text='Horizontally', command=change_direction)
-        set_direction.grid(row=1, column=1, sticky=N)
+        self.set_direction = Button(self.root, text='Horizontally', command=change_direction)
+        self.set_direction.grid(row=1, column=1, sticky=N)
 
 
-        ship_label = Label(self.root, text="Current ship:")
-        ship_label.grid(row=0, column=2, sticky=S)
+        self.ship_label = Label(self.root, text="Current ship:")
+        self.ship_label.grid(row=0, column=2, sticky=S)
 
         self.current_ship_label = Label(self.root, text="Carrier: 5", fg='red')
         self.current_ship_label.grid(row=1, column=2, sticky=N)
+
+
 
         def reset_ships():
             self.confirm_choice.config(state="disabled")
@@ -163,11 +168,13 @@ class Board(Frame):
                 for j in xrange(self.size):
                     self.board[i][j].config(bg="light sky blue")
 
-        reset_ships_label = Label(self.root, text="Reset ships")
-        reset_ships_label.grid(row=0, column=3, sticky=S)
+        self.reset_ships_label = Label(self.root, text="Reset ships")
+        self.reset_ships_label.grid(row=0, column=3, sticky=S)
 
-        reset_ships = Button(self.root, text="OK", width=10, command=reset_ships)
-        reset_ships.grid(row=1, column=3, sticky=N)
+        self.reset_ships = Button(self.root, text="OK", width=10, command=reset_ships)
+        self.reset_ships.grid(row=1, column=3, sticky=N)
+
+
 
         def start_game():
             ships_coordinates = map(str, placement)
@@ -175,7 +182,10 @@ class Board(Frame):
                 time.sleep(5)
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
-                    self.initShipBoard()
+                    if self.check_client_type() == 1:
+                        self.confirm_players_button = Button(self.root, text="Confirm the number of players")
+                        self.confirm_players_button.grid(row=1, column=3, sticky=E + W+ N)
+                    self.destroy_positioning()
                     self.initShootBoard()
                     break
 
@@ -184,9 +194,29 @@ class Board(Frame):
 
         self.confirm_choice.grid(row=2, column=1, sticky=E + W, columnspan=3)
 
-#
-# root = Tk()
-# editor = Board(root, 10)
-# root.mainloop()
+    def listen_players(self):
+        try:
+            self.current_players_info.config(text=self.client.get_number_of_players())
+            time.sleep(3)
+        except TclError:
+            return
 
+        # t = threading.Thread(target=self.listen_players, args=())
+        # t.setDaemon(True)
+        # t.start()
+
+    def master_confirm(self):
+        if self.client.master_confirm_game():
+            self.confirm_players_button.destroy()
+
+
+
+    def destroy_positioning(self):
+        self.set_direction.destroy()
+        self.ship_label.destroy()
+        self.current_ship_label.destroy()
+        self.reset_ships_label.destroy()
+        self.direction_label.destroy()
+        self.confirm_choice.destroy()
+        self.reset_ships.destroy()
 

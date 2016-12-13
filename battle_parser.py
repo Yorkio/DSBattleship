@@ -27,3 +27,14 @@ class Parser:
                 return True
             return False
 
+        elif subrequests[0] == "7":
+            if subrequests[1] == "0":
+                return False
+            return subrequests[2]
+
+
+
+        elif subrequests[0] == "8":
+            if subrequests[1] == "1":
+                return True
+            return False
