@@ -1,6 +1,6 @@
 from Tkinter import *
 from battle_client import *
-from ScrolledText import ScrolledText
+
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -8,10 +8,9 @@ class Board(Frame):
         self.size = size
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
-        self.initShipBoard()
-        self.initShootBoard()
+        #self.initShipBoard()
+        #self.initShootBoard()
         #self.initPositioning()
-        self.initMessageBoard()
 
     def initShipBoard(self):
         self.root.title("Battleships!")
@@ -46,20 +45,8 @@ class Board(Frame):
                 cell.grid(row=i, column=j, padx=1, pady=1)
                 cell.pack_propagate(0)
                 cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
-				
-    def initMessageBoard(self):
-        # Create message board label
-        message_board_name = Label(self.root, text='Message board', font=('times', 14))
-        message_board_name.grid(row=2, column=0, columnspan=2)
 
-        # Create message text with schrollbar
-        message_board = ScrolledText(self.root, width=45, height=10, undo=True)
-        message_board.grid(row=3, column=0, columnspan=2)
-
-        for m in range(1, 20):
-            message_board.insert(END, str(m)+'. ')
-            message_board.insert(END, 'Message itself')
-            message_board.insert(END, '\n------------------------\n')
+    #def send_positions(self):
 
 
     def setShip(self, i, j, event):
@@ -93,8 +80,11 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i][j + _].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + '#')
+                else:
+                    placement.append(str(pl) + ',')
             ship += 1
             self.current_ship_label.config(text=types[ship])
 
@@ -107,8 +97,11 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i + _][j].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + ',')
+                else:
+                    placement.append(str(pl) + '#')
             ship += 1
             self.current_ship_label.config(text=types[ship])
         if ship == len(ships):
@@ -195,3 +188,5 @@ class Board(Frame):
 # root = Tk()
 # editor = Board(root, 10)
 # root.mainloop()
+
+
