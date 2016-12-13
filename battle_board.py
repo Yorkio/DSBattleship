@@ -1,18 +1,17 @@
 from Tkinter import *
-from ScrolledText import ScrolledText
+from battle_client import *
 from ships_generator import *
 
 
 class Board(Frame):
-    def __init__(self, root, size):
-
+    def __init__(self, root, size, client):
+        self.client = client
         self.size = size
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
-        self.initShipBoard()
-        # self.initShootBoard()
-        self.initPositioning()
-        # self.initMessageBoard()
+        #self.initShipBoard()
+        #self.initShootBoard()
+        #self.initPositioning()
 
     def initShipBoard(self):
         self.root.title("Battleships!")
@@ -27,7 +26,7 @@ class Board(Frame):
         # Create a ship board cells
         for i in xrange(self.size):
             for j in xrange(self.size):
-                cell = Label(ship_board, text=' ' * 10, bg='light sky blue')
+                cell = Label(ship_board, text=' ' * 10 , bg='light sky blue')
                 cell.grid(row=i, column=j, padx=1, pady=1)
                 cell.bind('<Button-1>', lambda e, i=i, j=j: self.setShip(i, j, e))
                 self.board[i][j] = cell
@@ -46,21 +45,10 @@ class Board(Frame):
                 cell = Label(shoot_panel, text=' ' * 10, bg='white')
                 cell.grid(row=i, column=j, padx=1, pady=1)
                 cell.pack_propagate(0)
-                cell.bind('<Button-1>', lambda e, i=i, j=j: self.shoot(i, j, e))
+                cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
 
-    def initMessageBoard(self):
-        # Create message board label
-        message_board_name = Label(self.root, text='Message board', font=('times', 14))
-        message_board_name.grid(row=2, column=0, columnspan=2)
+    #def send_positions(self):
 
-        # Create message text with schrollbar
-        message_board = ScrolledText(self.root, width=45, height=10, undo=True)
-        message_board.grid(row=3, column=0, columnspan=2)
-
-        for m in range(1, 20):
-            message_board.insert(END, str(m) + '. ')
-            message_board.insert(END, 'Message itself')
-            message_board.insert(END, '\n------------------------\n')
 
     def setShip(self, i, j, event):
         ships = [5, 4, 3, 3, 2]
@@ -93,8 +81,12 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i][j + _].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + ',')
+                else:
+                    placement.append(str(pl) + '#')
+            
             ship += 1
             self.current_ship_label.config(text=types[ship])
 
@@ -107,20 +99,21 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i + _][j].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + ',')
+                else:
+                    placement.append(str(pl) + '#')
+            
             ship += 1
             self.current_ship_label.config(text=types[ship])
         if ship == len(ships):
             self.confirm_choice.config(state="normal")
 
+
     def shoot(self, i, j, event):
         event.widget.config(bg='grey')
         print i, j
-
-    def handleShots(self, x, y, hit):
-        if hit:
-            self.board
 
     def initPositioning(self):
         global k
@@ -153,6 +146,7 @@ class Board(Frame):
         set_direction = Button(self.root, text='Horizontally', command=change_direction)
         set_direction.grid(row=1, column=1, sticky=N)
 
+
         ship_label = Label(self.root, text="Current ship:")
         ship_label.grid(row=0, column=2, sticky=S)
 
@@ -160,12 +154,12 @@ class Board(Frame):
         self.current_ship_label.grid(row=1, column=2, sticky=N)
 
         def reset_ships_():
-
+            self.confirm_choice.config(state="disabled")
             global placement
             global ship
             ship = 0
             del placement[:]
-
+            
             self.current_ship_label.config(text="Carrier: 5")
 
             for i in xrange(self.size):
@@ -179,25 +173,41 @@ class Board(Frame):
         reset_ships.grid(row=1, column=3, sticky=N)
 
         def setRandShip(self, x, y, ship_length, direction):
+            global placement
             if direction == 1:
                 for _ in xrange(ship_length):
                     self.board[x][y + _].config(bg='green')
                 plc = (x, y, ship_length, direction)
-                for pl in plc:
-                    placement.append(str(pl))
+
+                for i, pl in enumerate(plc):
+                    if i != 3:
+                        placement.append(str(pl) + ',')
+                    else:
+                        placement.append(str(pl) + '#')
             else:
                 for _ in xrange(ship_length):
                     self.board[x + _][y].config(bg='green')
                 plc = (x, y, ship_length, direction)
-                for pl in plc:
-                    placement.append(str(pl))
+                for i, pl in enumerate(plc):
+                    if i != 3:
+                        placement.append(str(pl) + ',')
+                    else:
+                        placement.append(str(pl) + '#')
 
         def randomShipsPlacement():
+            global ship
+            global placement
             reset_ships_()
             random_ships = generate_random_fleet(self.size)
+            ship = 0
             for i in range(len(random_ships)):
                 x, y, ship_length, direction = int(random_ships[i][0]), int(random_ships[i][1]), int(random_ships[i][2]), int(random_ships[i][3])
                 setRandShip(self, x, y, ship_length, direction)
+                ship += 1
+            
+            if ship == 5:
+                self.confirm_choice.config(state="normal")
+                return
 
         generate_ships_label = Label(self.root, text="Generate ships")
         generate_ships_label.grid(row=0, column=4, sticky=S)
@@ -205,9 +215,23 @@ class Board(Frame):
         generate_ships = Button(self.root, text="Generate", width=10, command=randomShipsPlacement)
         generate_ships.grid(row=1, column=4, sticky=N)
 
+        def start_game():
+            ships_coordinates = map(str, placement)
+            
+            while True:
+                time.sleep(5)
+                send_coordinates = self.client.send_ships(ships_coordinates)
+                if send_coordinates:
+                    self.initShipBoard()
+                    self.initShootBoard()
+                    break
 
+        self.confirm_choice = Button(self.root, text="Start game",
+                                fg='purple3', font=('times', 12), state=DISABLED, command=start_game)
 
+        self.confirm_choice.grid(row=2, column=1, sticky=E + W, columnspan=3)
 
-root = Tk()
-editor = Board(root, 10)
-root.mainloop()
+#
+# root = Tk()
+# editor = Board(root, 10)
+# root.mainloop()
