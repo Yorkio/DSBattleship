@@ -94,6 +94,7 @@ class Client:
         return Parser.parse(game_connection_response)
 
     def send_ships(self, positions):
-        positions = "#3#" + "#".join(positions)
+        positions = "#3#" + ''.join(positions)
+        print positions
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
