@@ -82,9 +82,9 @@ class Board(Frame):
             plc = (i, j, ships[ship], direction)
             for i, pl in enumerate(plc):
                 if i != 3:
-                    placement.append(str(pl) + '#')
-                else:
                     placement.append(str(pl) + ',')
+                else:
+                    placement.append(str(pl) + '#')
             ship += 1
             self.current_ship_label.config(text=types[ship])
 
