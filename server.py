@@ -42,7 +42,9 @@ class GameSession:
 
     def leave(self, player_id):
         self.players[player_id] = 'Leaved'
-        return 0
+        for ship in self.ships:
+            if ship.owner_login == player_id:
+                self.ships.remove(ship)
 
     def addPlayer(self, login):
         self.players.append(login)
@@ -127,14 +129,12 @@ class GameSession:
 
     def sendStats(self, hit_conditions, hitted_players, sinked_players):
         messages = dict.fromkeys(self.players, '')
-
         hitter = ''
         for player in self.players:
             messages[player] += '4#'
             if hit_conditions[player] == 3:
                 hitter = player
         for player in hit_conditions:          # 4# + 0 - this player wasn't hitted, 1 - this player wasn't hitted, 2 - this player is spectator + # list of players which ships was sinked
-
             if hit_conditions[player] == 0:
                 messages[player] += '0#'
             elif hit_conditions[player] == 1 or hit_conditions[player] == 2:
