@@ -31,7 +31,7 @@ lifeCondition()
 
 class GameSession:
     def __init__(self, login, size):
-        self.id = uuid.uuid4()
+        self.id = str(uuid.uuid4())
         self.ships = []
         self.players = []
         self.master_client = login
@@ -234,10 +234,10 @@ class Parser:
                 return '2#1'
             player_login = CorrIDs[cor_id]
             requested_game = subrequests[2]
-            if (GameSessions[requested_game].state == 1):
+            if (GameSessions[requested_game].state != 0):
                 return '2#0'
             GameSessions[requested_game].addPlayer(player_login)
-            PlayerGame[cor_id] = requested_game.id
+            PlayerGame[cor_id] = GameSessions[requested_game].id
             return '2#1'
 
         if (subrequests[0] == '3'):
