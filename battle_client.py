@@ -24,7 +24,6 @@ class Client:
         self.server = None
 
     def set_server_id(self, server_id):
-        print server_id
         self.server_id = server_id
         self.channel = self.connection.channel()
         result = self.channel.queue_declare(queue='rpc_queue_durable_' + str(server_id), durable = True)
@@ -59,9 +58,6 @@ class Client:
         self.response = None
 
         self.corr_id = self.clientID
-        print request
-        print self.server_id
-        print 'rpc_queue_durable_' + str(self.server_id)
         self.channel.basic_publish(exchange='',
                                    routing_key='rpc_queue_durable_' + str(self.server_id),
                                    properties=pika.BasicProperties(
@@ -77,7 +73,6 @@ class Client:
     def isFreeName(self, name):
         name_request = "#".join(("0", name))
         name_response = self.call(name_request)
-        print name_response
         return Parser.parse(name_response)
 
     def get_game_list(self):
@@ -94,7 +89,6 @@ class Client:
         return Parser.parse(game_connection_response)
 
     def send_ships(self, positions):
-        positions = "#3#" + ''.join(positions)
-        print positions
+        positions = "3#" + ''.join(positions)
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
