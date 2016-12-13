@@ -7,10 +7,10 @@ import time
 
 
 class Client:
-    def __init__(self, server_id=None, type=0 , server_ip='127.0.0.1'):
+    def __init__(self, type=0, server_ip='127.0.0.1'):
 
         self.clientID = str(uuid.uuid1())
-        self.server_id = server_id
+        self.server_id = ''
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=server_ip, port=5672))
 
@@ -18,18 +18,19 @@ class Client:
 
         self.listen_channel = self.connection.channel()
         self.listen_channel.queue_declare(queue='servers_queue', durable=True)
-        self.listen_Gchannel.basic_consume(self.callback,
+        self.listen_channel.basic_consume(self.callback,
                               queue='servers_queue',
                               no_ack=True)
         self.server = None
 
     def set_server_id(self, server_id):
+        print server_id
         self.server_id = server_id
         self.channel = self.connection.channel()
-        result = self.channel.queue_declare(queue='rpc_queue_durable_' + server_id, exclusive=True, durable = True)
+        result = self.channel.queue_declare(queue='rpc_queue_durable_' + str(server_id), durable = True)
         self.callback_queue = result.method.queue
         self.channel.basic_consume(self.on_response, no_ack=True,
-                                   queue=result)
+                                   queue=self.callback_queue)
 
     def get_server_id(self):
         return self.server_id
@@ -54,18 +55,21 @@ class Client:
         return self.server_name
 
 
-    def call(self, n):
+    def call(self, request):
         self.response = None
 
         self.corr_id = self.clientID
-
+        print request
+        print self.server_id
+        print 'rpc_queue_durable_' + str(self.server_id)
         self.channel.basic_publish(exchange='',
                                    routing_key='rpc_queue_durable_' + str(self.server_id),
                                    properties=pika.BasicProperties(
                                        reply_to=self.callback_queue,
                                        correlation_id=self.corr_id,
+                                       delivery_mode=2,
                                    ),
-                                   body=str(n))
+                                   body=str(request))
         while self.response is None:
             self.connection.process_data_events()
         return self.response
@@ -90,7 +94,7 @@ class Client:
         return Parser.parse(game_connection_response)
 
     def send_ships(self, positions):
-        positions = "#3#" + "#".join(positions)
+        positions = "#3#" + ''.join(positions)
+        print positions
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
-

@@ -80,8 +80,11 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i][j + _].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + '#')
+                else:
+                    placement.append(str(pl) + ',')
             ship += 1
             self.current_ship_label.config(text=types[ship])
 
@@ -94,8 +97,11 @@ class Board(Frame):
             for _ in xrange(ships[ship]):
                 self.board[i + _][j].config(bg='green')
             plc = (i, j, ships[ship], direction)
-            for pl in plc:
-                placement.append(str(pl))
+            for i, pl in enumerate(plc):
+                if i != 3:
+                    placement.append(str(pl) + ',')
+                else:
+                    placement.append(str(pl) + '#')
             ship += 1
             self.current_ship_label.config(text=types[ship])
         if ship == len(ships):

@@ -5,14 +5,13 @@ import tkMessageBox
 import threading
 
 class Login(Frame):
-    def __init__(self, root, server_id='127.0.0.1'):
-
-        self.server_id = server_id
-
-        self.client = Client(self.server_id)
-
+    def __init__(self, root, client):
+        self.server_id = ''
+        if (client == None):
+            self.client = Client()
+        else:
+            self.client = client
         self.root = root
-
         self.root.title("Battleships!")
 
     def choose_server(self):
@@ -31,10 +30,10 @@ class Login(Frame):
         def choose_server():
             try:
                 server_id = avaliable_servers.get(avaliable_servers.curselection())
-                self.client.set_server_id(server_id)
                 self.root.destroy()
                 root = Tk()
-                editor = Login(root)
+                self.client.set_server_id(server_id)
+                editor = Login(root, self.client)
                 editor.get_nickname()
                 root.mainloop()
             except TclError:
@@ -104,6 +103,7 @@ class Login(Frame):
 
         confirm_size = Button(board_size, text='OK!', command=check_board_size)
         confirm_size.grid(row=1, column=0, sticky=W + E, columnspan=2)
+
     def initUI(self):
         # Return the chosen game server
         def choose_game():
@@ -131,9 +131,10 @@ class Login(Frame):
         def new_game():
             self.root.destroy()
             root = Tk()
-            editor = Login(root)
+            editor = Login(root, self.client)
             editor.set_board_size()
             root.mainloop()
+
         create_game = Button(login_form, text='Create New Game!', width=20,
                              bg='light blue', font=('times', 14), command=new_game)
         create_game.grid(row=0, column=1)
@@ -174,6 +175,8 @@ class Login(Frame):
 
         def check_nickname():
             nickname = nickname_entry.get()
+            print self.client.server_id
+
             if not nickname or not self.client.isFreeName(nickname):
                 return
             self.initUI()
@@ -182,6 +185,6 @@ class Login(Frame):
         nickname_button.grid(row=1, column=0, sticky=E + W, columnspan=2)
 
 root = Tk()
-editor = Login(root)
+editor = Login(root, None)
 editor.choose_server()
 root.mainloop()
