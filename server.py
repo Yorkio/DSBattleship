@@ -50,8 +50,6 @@ class GameSession:
         self.players.append(login)
 
     def addShipsOfPlayer(self, id, ships):
-        print "Player_login", id
-        print "Ships", ships
         for i in range(len(ships)):
             entity = ships[i].split(',')
             x = int(entity[0])
@@ -78,7 +76,7 @@ class GameSession:
 
     def currentActivePlayers(self):
         count = 0
-        for player in self.players:
+        for player in Players:
             if player.type == "Player":
                 count += 1
         return count
@@ -95,7 +93,7 @@ class GameSession:
                 response += '0'
             correlation_id = player.cor_id
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
 
@@ -120,10 +118,10 @@ class GameSession:
             if player not in hit_conditions.keys() and Players[player].type == 'Player':
                 hit_conditions[player] = 0
         if self.checkEndGame():
-            response = 'Congratulations, you won!!!'
+            response = '6' # Cingrat
             correlation_id = Players[login].corID
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
             return
@@ -160,7 +158,7 @@ class GameSession:
 
             correlation_id = Players[player].corID
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
         self.newRound()
@@ -198,7 +196,6 @@ clientNumOfShips = 5
 class Parser:
     @staticmethod
     def parse(request, cor_id):
-        print "request", request
         subrequests = request.split('#')
         if (len(subrequests) == 0):
             return
@@ -247,20 +244,24 @@ class Parser:
             return '2#1'
 
         if (subrequests[0] == '3'):
-            print subrequests
             del subrequests[0]
             del subrequests[-1]
             if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
             game_session = PlayerGame[cor_id]
-            game_session.addShipsOfPlayer(player_login, subrequests)
+            GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
+
+        if (subrequests[0] == '7'):
+            game_session = PlayerGame[cor_id]
+            number = GameSessions[game_session].currentActivePlayers()
+            return '7#' + str(number)
 
 
 def on_request(ch, method, props, body):
     request = str(body)
-
+    
     response = Parser.parse(request, props.correlation_id)
 
     ch.basic_publish(exchange='',
