@@ -2,6 +2,7 @@ import uuid
 import pika
 import threading
 
+
 serverID = uuid.uuid1()
 
 #print serverID
@@ -78,7 +79,7 @@ class GameSession:
 
     def currentActivePlayers(self):
         count = 0
-        for player in self.players:
+        for player in Players:
             if player.type == "Player":
                 count += 1
         return count
@@ -222,9 +223,10 @@ class Parser:
             for game in GameSessions.values():
                 if (game.state == 0):
                     numOfActiveGames += 1
-                    response_tail += str(game.id) + '#'
-                    response_tail += str(game.size) + '#'
+                    response_tail += str(game.id) + ';'
+                    response_tail += str(game.size) + ';'
                     response_tail += str(len(game.players)) + '#'
+            print response + str(numOfActiveGames) + '#' + response_tail
             return response + str(numOfActiveGames) + '#' + response_tail
 
         if (subrequests[0] == '2'):
@@ -255,12 +257,14 @@ class Parser:
             GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
 
+        if (subrequests[0] == '7'):
+            game_session = PlayerGame[cor_id]
+            number = len(GameSessions[game_session].players)
+            return '7#' + str(number)
+
 
 def on_request(ch, method, props, body):
     request = str(body)
-
-    #print 'request = ', request
-    #print 'id = ', props.correlation_id
 
     response = Parser.parse(request, props.correlation_id)
 
