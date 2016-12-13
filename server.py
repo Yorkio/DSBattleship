@@ -45,7 +45,6 @@ class GameSession:
         for ship in self.ships:
             if ship.owner_login == player_id:
                 self.ships.remove(ship)
-        return 0
 
     def addPlayer(self, login):
         self.players.append(login)
