@@ -240,11 +240,17 @@ class Parser:
 
         if (subrequests[0] == '4'):
             game_session = PlayerGame[cor_id]
+            player_login = CorrIDs[cor_id]
             if (len(subrequests) == 1 and len(GameSessions[game_session].hit_messages.keys()) == 0):
-                return '4#0'
+                return '4#-1'
             if (len(subrequests) == 1):
-                pass
-            return '4#0'
+                return GameSessions[game_session].hit_messages[player_login]
+
+            if (len(subrequests) < 3):
+                return '4#-1'
+            coordinates = (int(subrequests[1]), int(subrequests[2]))
+            GameSessions[game_session].makeHit(player_login, coordinates)
+            return GameSessions[game_session].hit_messages[player_login]
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
