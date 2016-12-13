@@ -1,7 +1,7 @@
 from battle_parser import *
 import uuid
 import pika
-
+import time
 
 class Client:
     def __init__(self, type=0, server_ip='127.0.0.1'):
