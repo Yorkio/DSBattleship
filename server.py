@@ -4,7 +4,7 @@ import threading
 
 serverID = uuid.uuid1()
 
-print serverID
+#print serverID
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
     host='127.0.0.1', port=5672))
@@ -95,7 +95,7 @@ class GameSession:
                 response += '0'
             correlation_id = player.cor_id
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
 
@@ -120,10 +120,10 @@ class GameSession:
             if player not in hit_conditions.keys() and Players[player].type == 'Player':
                 hit_conditions[player] = 0
         if self.checkEndGame():
-            response = 'Congratulations, you won!!!'
+            response = '6' # Congrat
             correlation_id = Players[login].corID
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
             return
@@ -160,7 +160,7 @@ class GameSession:
 
             correlation_id = Players[player].corID
             channel.basic_publish(exchange='',
-                                  routing_key='rpc_queue_durable',
+                                  routing_key='rpc_queue_durable_' + str(serverID),
                                   properties=pika.BasicProperties(correlation_id=correlation_id, delivery_mode=2, ),
                                   body=str(response))
         self.newRound()
@@ -252,14 +252,19 @@ class Parser:
                 return '3#0'
             player_login = CorrIDs[cor_id]
             game_session = PlayerGame[cor_id]
-            game_session.addShipsOfPlayer(player_login, subrequests)
+            GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
 
 
 def on_request(ch, method, props, body):
     request = str(body)
 
+    #print 'request = ', request
+    #print 'id = ', props.correlation_id
+
     response = Parser.parse(request, props.correlation_id)
+
+    #print 'response = ', response
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,

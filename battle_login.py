@@ -150,8 +150,7 @@ class Login(Frame):
                 while True:
                     game_sessions = self.client.get_game_list()
                     if game_sessions:
-                        for game_id, game_size in game_sessions:
-                            game_servers.insert(END, game_id + "/" + game_size)
+                        game_servers.insert(END, "There somme active games but fuck you!")
                     else:
                         game_servers.insert(END, "No active games!")
                     time.sleep(3)
@@ -175,7 +174,6 @@ class Login(Frame):
 
         def check_nickname():
             nickname = nickname_entry.get()
-            print self.client.server_id
 
             if not nickname or not self.client.isFreeName(nickname):
                 return
