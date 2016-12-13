@@ -249,6 +249,10 @@ class Parser:
             GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
 
+        if (subrequests[0] == '5'):
+            game_session = PlayerGame[cor_id]
+            return '5#' + str(GameSessions[game_session].players[GameSessions[game_session].curActive])
+
         if (subrequests[0] == '6'):
             game_session = PlayerGame[cor_id]
             if GameSessions[game_session].checkEndGame() == True:
