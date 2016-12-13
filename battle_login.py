@@ -150,8 +150,10 @@ class Login(Frame):
                 while True:
                     game_sessions = self.client.get_game_list()
                     if game_sessions:
-                        for game_id, game_size in game_sessions:
-                            game_servers.insert(END, game_id + "/" + game_size)
+                        for game_info in game_sessions:
+                            game_info = game_info.split(',')
+                            for game_id, game_size, number_of_players in game_info:
+                                game_servers.insert(END, game_id + "/" + game_size + "/" + number_of_players)
                     else:
                         game_servers.insert(END, "No active games!")
                     time.sleep(3)

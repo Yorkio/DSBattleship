@@ -1,6 +1,7 @@
 from Tkinter import *
 from battle_client import *
 import threading
+import time
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -179,12 +180,13 @@ class Board(Frame):
         def start_game():
             ships_coordinates = map(str, placement)
             while True:
-                time.sleep(5)
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
                     if self.check_client_type() == 1:
-                        self.confirm_players_button = Button(self.root, text="Confirm the number of players")
-                        self.confirm_players_button.grid(row=1, column=3, sticky=E + W+ N)
+                        self.confirm_players_button = Button(self.root,
+                                                             text="Confirm the number of players",
+                                                             command=self.master_confirm)
+                        self.confirm_players_button.grid(row=1, column=2, sticky=E + W+ N)
                     self.destroy_positioning()
                     self.initShootBoard()
                     break
@@ -206,8 +208,9 @@ class Board(Frame):
         # t.start()
 
     def master_confirm(self):
+        self.confirm_players_button.destroy()
         if self.client.master_confirm_game():
-            self.confirm_players_button.destroy()
+            print 'lol'
 
 
 
@@ -219,4 +222,3 @@ class Board(Frame):
         self.direction_label.destroy()
         self.confirm_choice.destroy()
         self.reset_ships.destroy()
-

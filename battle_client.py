@@ -1,9 +1,6 @@
 from battle_parser import *
 import uuid
 import pika
-import time
-
-
 
 
 class Client:
@@ -26,7 +23,7 @@ class Client:
     def set_server_id(self, server_id):
         self.server_id = server_id
         self.channel = self.connection.channel()
-        result = self.channel.queue_declare(queue='rpc_queue_durable_' + str(server_id), durable = True)
+        result = self.channel.queue_declare(exclusive=True, durable = True)
         self.callback_queue = result.method.queue
         self.channel.basic_consume(self.on_response, no_ack=True,
                                    queue=self.callback_queue)
@@ -66,18 +63,21 @@ class Client:
                                        delivery_mode=2,
                                    ),
                                    body=str(request))
+
         while self.response is None:
             self.connection.process_data_events()
         return self.response
 
     def isFreeName(self, name):
         name_request = "#".join(("0", name))
+
         name_response = self.call(name_request)
         return Parser.parse(name_response)
 
     def get_game_list(self):
         list_of_games_request = "#".join(("1"))
         list_of_games_response = self.call(list_of_games_request)
+
         return Parser.parse(list_of_games_response)
 
     def send_type(self, game_id=None, size=None):
@@ -92,3 +92,11 @@ class Client:
         positions = "3#" + ''.join(positions)
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
+
+    def get_number_of_players(self):
+        players_requests = "7"
+        server_players_repsonse = self.call(players_requests)
+        return Parser.parse(server_players_repsonse)
+
+    def master_confirm_game(self):
+        confirmation = "8"
