@@ -258,8 +258,6 @@ class Parser:
 def on_request(ch, method, props, body):
     request = str(body)
 
-    print request
-
     response = Parser.parse(request, props.correlation_id)
 
     ch.basic_publish(exchange='',
