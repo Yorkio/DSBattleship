@@ -50,6 +50,8 @@ class GameSession:
         self.players.append(login)
 
     def addShipsOfPlayer(self, id, ships):
+        print "Player_login", id
+        print "Ships", ships
         for i in range(len(ships)):
             entity = ships[i].split(',')
             x = int(entity[0])
@@ -196,6 +198,7 @@ clientNumOfShips = 5
 class Parser:
     @staticmethod
     def parse(request, cor_id):
+        print "request", request
         subrequests = request.split('#')
         if (len(subrequests) == 0):
             return
@@ -244,7 +247,9 @@ class Parser:
             return '2#1'
 
         if (subrequests[0] == '3'):
-            subrequests.remove(subrequests.index(0))
+            print subrequests
+            del subrequests[0]
+            del subrequests[-1]
             if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
