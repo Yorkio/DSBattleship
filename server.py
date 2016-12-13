@@ -255,7 +255,7 @@ class Parser:
 
         if (subrequests[0] == '7'):
             game_session = PlayerGame[cor_id]
-            number = GameSessions[game_session].currentActivePlayers()
+            number = len(GameSessions[game_session].players)
             return '7#' + str(number)
 
 
