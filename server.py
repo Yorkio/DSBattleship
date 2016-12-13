@@ -4,6 +4,8 @@ import threading
 
 serverID = uuid.uuid1()
 
+print serverID
+
 connection = pika.BlockingConnection(pika.ConnectionParameters(
     host='127.0.0.1', port=5672))
 
@@ -197,6 +199,7 @@ class Parser:
     @staticmethod
     def parse(request, cor_id):
         subrequests = request.split('#')
+
         if (len(subrequests) == 0):
             return
 
@@ -216,8 +219,7 @@ class Parser:
             response = '1#'
             response_tail = ''
             numOfActiveGames = 0
-            for game in GameSessions:
-                print game.state
+            for game in GameSessions.values():
                 if (game.state == 0):
                     numOfActiveGames += 1
                     response_tail += str(game.id) + '#'
@@ -244,7 +246,7 @@ class Parser:
             return '2#1'
 
         if (subrequests[0] == '3'):
-            subrequests.remove(subrequests.index(0))
+            del subrequests[0]
             if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
@@ -255,6 +257,8 @@ class Parser:
 
 def on_request(ch, method, props, body):
     request = str(body)
+
+    print request
 
     response = Parser.parse(request, props.correlation_id)
 
