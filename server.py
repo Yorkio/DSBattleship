@@ -4,6 +4,8 @@ import threading
 
 serverID = uuid.uuid1()
 
+#print serverID
+
 connection = pika.BlockingConnection(pika.ConnectionParameters(
     host='127.0.0.1', port=5672))
 
@@ -118,7 +120,7 @@ class GameSession:
             if player not in hit_conditions.keys() and Players[player].type == 'Player':
                 hit_conditions[player] = 0
         if self.checkEndGame():
-            response = '6' # Cingrat
+            response = '6' # Congrat
             correlation_id = Players[login].corID
             channel.basic_publish(exchange='',
                                   routing_key='rpc_queue_durable_' + str(serverID),
@@ -197,6 +199,7 @@ class Parser:
     @staticmethod
     def parse(request, cor_id):
         subrequests = request.split('#')
+
         if (len(subrequests) == 0):
             return
 
@@ -216,8 +219,7 @@ class Parser:
             response = '1#'
             response_tail = ''
             numOfActiveGames = 0
-            for game in GameSessions:
-                print game.state
+            for game in GameSessions.values():
                 if (game.state == 0):
                     numOfActiveGames += 1
                     response_tail += str(game.id) + '#'
@@ -261,8 +263,10 @@ class Parser:
 
 def on_request(ch, method, props, body):
     request = str(body)
-    
+
     response = Parser.parse(request, props.correlation_id)
+
+    #print 'response = ', response
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
