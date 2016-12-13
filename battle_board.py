@@ -179,7 +179,6 @@ class Board(Frame):
         def start_game():
             ships_coordinates = map(str, placement)
             while True:
-                time.sleep(5)
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
                     if self.check_client_type() == 1:
@@ -188,6 +187,7 @@ class Board(Frame):
                     self.destroy_positioning()
                     self.initShootBoard()
                     break
+                time.sleep(5)
 
         self.confirm_choice = Button(self.root, text="Start game",
                                 fg='purple3', font=('times', 12), state=DISABLED, command=start_game)
