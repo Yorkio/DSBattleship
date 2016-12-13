@@ -247,6 +247,7 @@ class Parser:
 
         if (subrequests[0] == '3'):
             del subrequests[0]
+            del subrequests[-1]
             if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
