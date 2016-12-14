@@ -1,6 +1,7 @@
 from Tkinter import *
 from battle_client import *
 import threading
+import time
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -146,7 +147,6 @@ class Board(Frame):
         self.set_direction = Button(self.root, text='Horizontally', command=change_direction)
         self.set_direction.grid(row=1, column=1, sticky=N)
 
-
         self.ship_label = Label(self.root, text="Current ship:")
         self.ship_label.grid(row=0, column=2, sticky=S)
 
@@ -182,12 +182,21 @@ class Board(Frame):
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
                     if self.check_client_type() == 1:
-                        self.confirm_players_button = Button(self.root, text="Confirm the number of players")
-                        self.confirm_players_button.grid(row=1, column=3, sticky=E + W+ N)
+                        self.confirm_players_button = Button(self.root,
+                                                             text="Confirm the number of players",
+                                                             command=self.master_confirm)
+                        self.confirm_players_button.grid(row=1, column=2, sticky=E + W + N)
+                    else:
+                        t = threading.Thread(target=self.listen_server_game, args=())
+                        t.setDaemon(True)
+                        t.start()
+
                     self.destroy_positioning()
                     self.initShootBoard()
+                    t = threading.Thread(target=self.listen_players, args=())
+                    t.setDaemon(True)
+                    t.start()
                     break
-                time.sleep(5)
 
         self.confirm_choice = Button(self.root, text="Start game",
                                 fg='purple3', font=('times', 12), state=DISABLED, command=start_game)
@@ -196,19 +205,26 @@ class Board(Frame):
 
     def listen_players(self):
         try:
-            self.current_players_info.config(text=self.client.get_number_of_players())
-            time.sleep(3)
-        except TclError:
+            while True:
+                self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
+                time.sleep(3)
+        except (TclError, TypeError, AssertionError) as e:
             return
 
-        # t = threading.Thread(target=self.listen_players, args=())
-        # t.setDaemon(True)
-        # t.start()
+    #def listen_shoot(self):
+
 
     def master_confirm(self):
+        self.confirm_players_button.destroy()
         if self.client.master_confirm_game():
-            self.confirm_players_button.destroy()
+            t = threading.Thread(target=self.listen_server_game, args=())
+            t.setDaemon(True)
+            t.start()
 
+    def listen_server_game(self):
+        while not self.client.win_check():
+            if self.client.new_round_check() == self.client.get_client_id():
+                print "my turn"
 
 
     def destroy_positioning(self):
@@ -219,4 +235,3 @@ class Board(Frame):
         self.direction_label.destroy()
         self.confirm_choice.destroy()
         self.reset_ships.destroy()
-

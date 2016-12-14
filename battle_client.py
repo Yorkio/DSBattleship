@@ -1,7 +1,7 @@
 from battle_parser import *
 import uuid
 import pika
-import time
+
 
 class Client:
     def __init__(self, type=0, server_ip='127.0.0.1'):
@@ -28,6 +28,9 @@ class Client:
         self.channel.basic_consume(self.on_response, no_ack=True,
                                    queue=self.callback_queue)
 
+    def get_client_id(self):
+        return self.clientID
+
     def get_server_id(self):
         return self.server_id
 
@@ -38,7 +41,6 @@ class Client:
         return self.type
 
     def on_response(self, ch, method, props, body):
-        # print 'innonresponse: ', body
         if self.corr_id == self.clientID:
             self.response = body
 
@@ -65,9 +67,6 @@ class Client:
                                    ),
                                    body=str(request))
 
-        #print 'request = ', request
-        #print 'Corid = ', self.corr_id
-        #print 'Cliid = ', self.clientID
         while self.response is None:
             self.connection.process_data_events()
         return self.response
@@ -75,19 +74,19 @@ class Client:
     def isFreeName(self, name):
         name_request = "#".join(("0", name))
 
-        #print 'namerequest = ', name_request
-
         name_response = self.call(name_request)
         return Parser.parse(name_response)
 
     def get_game_list(self):
         list_of_games_request = "#".join(("1"))
         list_of_games_response = self.call(list_of_games_request)
+
         return Parser.parse(list_of_games_response)
 
     def send_type(self, game_id=None, size=None):
         if self.type == 0:
             game_connection_request = "#".join(("2", "1", game_id))
+            print game_connection_request
         elif self.type == 1:
             game_connection_request = "#".join(( "2", "0", size))
         game_connection_response = self.call(game_connection_request)
@@ -97,3 +96,26 @@ class Client:
         positions = "3#" + ''.join(positions)
         server_positions_response = self.call(positions)
         return Parser.parse(server_positions_response)
+
+    def get_number_of_players(self):
+        players_requests = "7"
+        server_players_repsonse = self.call(players_requests)
+        print server_players_repsonse, 'server players response'
+        return Parser.parse(server_players_repsonse)
+
+
+    def new_round_check(self):
+        new_round_request = "5"
+        server_new_round_response = self.call(new_round_request)
+        return Parser.parse(server_new_round_response)
+
+    def win_check(self):
+        new_round_request = "6"
+        server_new_round_request = self.call(new_round_request)
+        return Parser.parse(server_new_round_request)
+
+    def master_confirm_game(self):
+        confirmation = "8"
+        server_ackn_master = self.call(confirmation)
+        print server_ackn_master, 'server_ackn'
+        return Parser.parse(server_ackn_master)

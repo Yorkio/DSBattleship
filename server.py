@@ -2,6 +2,7 @@ import uuid
 import pika
 import threading
 import time
+from random import choice
 
 serverID = uuid.uuid1()
 
@@ -193,13 +194,28 @@ cur_message_time = {}
 def setMessageTime(player_cor_id):
     global cur_message_time
     cur_message_time[player_cor_id] = time.clock()
+    #print cur_message_time
+    if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Disconnected':
+        Players[CorrIDs[player_cor_id]].type = 'Player'
+        print "Player", CorrIDs[player_cor_id], "returned to the game"
 
 def checkClientDisconnect():
     t = 5
     for player_cor_id in cur_message_time:
         if time.clock() - cur_message_time[player_cor_id] > t:
+            if len(GameSessions) != 0:
+                master_login = GameSessions[PlayerGame[player_cor_id]].master_client
+                if CorrIDs[player_cor_id] == master_login:
+                    active_palyers = []
+                    for player in GameSessions[PlayerGame[player_cor_id]].players:
+                        if Players[player].type != 'Disconnected':
+                            active_palyers.append(player)
+                    new_master_client = choice(active_palyers)
+                    GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
+                    print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
             if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
+                print "Player", CorrIDs[player_cor_id], "disconnected"
     threading.Timer(t, checkClientDisconnect).start()
 
 checkClientDisconnect()
@@ -220,6 +236,7 @@ class Parser:
                 response = '0#0'
                 return response
             Players[request_name] = Player(request_name, cor_id)
+            print "Player", request_name, "connected"
             CorrIDs[cor_id] = request_name
             response = '0#1'
             return response
