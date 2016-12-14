@@ -1,7 +1,8 @@
 import uuid
 import pika
 import threading
-
+import time
+from random import choice
 
 serverID = uuid.uuid1()
 
@@ -24,7 +25,6 @@ def lifeCondition():
                           properties=pika.BasicProperties(delivery_mode=2, expiration=str(int(time * 1000))),
                           body=str(response))
     threading.Timer(time, lifeCondition).start()
-
 
 lifeCondition()
 
@@ -145,7 +145,7 @@ class GameSession:
                 #    response += player + ';'
                 #messages[player] = messages[player][:len(messages[player]) - 1]
 
-        self.hit_messages[hitter] += str(len(hitted_players) + len(sinked_players)) + '#'
+        self.hit_messages[hitter] += str(len(hitted_players) + 2 * len(sinked_players)) + '#'
 
         for player in self.players:
             for p in sinked_players:
@@ -192,13 +192,43 @@ CorrIDs = {}
 GameSessions = {}
 PlayerGame = {}
 clientNumOfShips = 5
+cur_message_time = {}
 
+def setMessageTime(player_cor_id):
+    global cur_message_time
+    cur_message_time[player_cor_id] = time.clock()
+    #print cur_message_time
+    if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Disconnected':
+        Players[CorrIDs[player_cor_id]].type = 'Player'
+        print "Player", CorrIDs[player_cor_id], "returned to the game"
+
+def checkClientDisconnect():
+    t = 5
+    for player_cor_id in cur_message_time:
+        if time.clock() - cur_message_time[player_cor_id] > t:
+            if len(GameSessions) != 0:
+                master_login = GameSessions[PlayerGame[player_cor_id]].master_client
+                if CorrIDs[player_cor_id] == master_login:
+                    active_palyers = []
+                    for player in GameSessions[PlayerGame[player_cor_id]].players:
+                        if Players[player].type != 'Disconnected':
+                            active_palyers.append(player)
+                    if len(active_palyers) != 0:
+                        new_master_client = choice(active_palyers)
+                        GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
+                        print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
+            if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
+                Players[CorrIDs[player_cor_id]].type = 'Disconnected'
+                print "Player", CorrIDs[player_cor_id], "disconnected"
+    threading.Timer(t, checkClientDisconnect).start()
+
+checkClientDisconnect()
 
 class Parser:
     @staticmethod
     def parse(request, cor_id):
+        setMessageTime(cor_id)
         subrequests = request.split('#')
-
         if (len(subrequests) == 0):
             return
 
@@ -210,6 +240,7 @@ class Parser:
                 response = '0#0'
                 return response
             Players[request_name] = Player(request_name, cor_id)
+            print "Player", request_name, "connected"
             CorrIDs[cor_id] = request_name
             response = '0#1'
             return response
@@ -224,7 +255,7 @@ class Parser:
                     response_tail += str(game.id) + ';'
                     response_tail += str(game.size) + ';'
                     response_tail += str(len(game.players)) + '#'
-            print response + str(numOfActiveGames) + '#' + response_tail
+            #print response + str(numOfActiveGames) + '#' + response_tail
             return response + str(numOfActiveGames) + '#' + response_tail
 
         if (subrequests[0] == '2'):
@@ -261,8 +292,14 @@ class Parser:
             player_login = CorrIDs[cor_id]
             if (len(subrequests) == 1 and len(GameSessions[game_session].hit_messages.keys()) == 0):
                 return '4#-1'
+            if (not (player_login in GameSessions[game_session].hit_messages)):
+                return '4#-1'
+
             if (len(subrequests) == 1):
-                return GameSessions[game_session].hit_messages[player_login]
+                response = GameSessions[game_session].hit_messages[player_login]
+                GameSessions[game_session].hit_messages[player_login] = ''
+                del GameSessions[game_session].hit_messages[player_login]
+                return response
 
             if (len(subrequests) < 2):
                 return '4#-1'
@@ -274,7 +311,13 @@ class Parser:
 
             coordinates = (int(subrequests[0]), int(subrequests[1]))
             GameSessions[game_session].makeHit(player_login, coordinates)
-            return GameSessions[game_session].hit_messages[player_login]
+
+            response = GameSessions[game_session].hit_messages[player_login]
+            GameSessions[game_session].hit_messages[player_login] = ''
+            del GameSessions[game_session].hit_messages[player_login]
+            return response
+
+        
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
@@ -331,6 +374,8 @@ class Parser:
                 GameSessions[game_session].restart = subrequests[1]
                 GameSessions[game_session].restartGame()
             return '11#' + str(GameSessions[game_session].restart)
+
+
 
 def on_request(ch, method, props, body):
     request = str(body)
