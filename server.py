@@ -145,7 +145,7 @@ class GameSession:
                 #    response += player + ';'
                 #messages[player] = messages[player][:len(messages[player]) - 1]
 
-        self.hit_messages[hitter] += str(len(hitted_players) + len(sinked_players)) + '#'
+        self.hit_messages[hitter] += str(len(hitted_players) + 2 * len(sinked_players)) + '#'
 
         for player in self.players:
             for p in sinked_players:
