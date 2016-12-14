@@ -122,7 +122,6 @@ class GameSession:
 
     def makeStats(self, hit_conditions, hitted_players, sinked_players, coordinate):
         self.hit_messages = dict.fromkeys(self.players, '')
-        self.history[self.current_round] = ''
         hitter = ''
         for player in self.players:
             if Players[player].type == 'Disconnected' or Players[player].type == 'Just_reconnected':
@@ -185,6 +184,7 @@ class GameSession:
         self.curActive = -1
         self.hit_messages = {}
         self.hitconditions = {}
+        self.stats_for_disconnected = {}
         for player in self.players:
             Players[player].sent_ships = 0
         return
