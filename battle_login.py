@@ -1,8 +1,9 @@
 from Tkinter import *
 from battle_client import *
-from battle_board import *
+import battle_board
 import tkMessageBox
 import threading
+import time
 
 class Login(Frame):
     def __init__(self, root, client):
@@ -12,7 +13,9 @@ class Login(Frame):
         else:
             self.client = client
         self.root = root
-        self.root.title("Battleships!")
+        if (root):
+            self.root.title("Battleships!")
+        self.isServerChoosed = False
 
     def choose_server(self):
 
@@ -30,7 +33,9 @@ class Login(Frame):
         def choose_server():
             try:
                 server_id = avaliable_servers.get(avaliable_servers.curselection())
-                self.root.destroy()
+                self.isServerChoosed = True
+                if (self.root):
+                    self.root.destroy()
                 root = Tk()
                 self.client.set_server_id(server_id)
                 editor = Login(root, self.client)
@@ -39,15 +44,13 @@ class Login(Frame):
             except TclError:
                 return
 
-
-
         server_select_button = Button(avaliable_servers_frame, text="OK!",
                                       font=('times', 14), bg='ghost white', command=choose_server)
         server_select_button.grid(row=2, column=0, sticky=W+E)
 
-
-
         def get_avaliable_servers():
+            if self.isServerChoosed:
+                return
             try:
                 while True:
                     server_list = []
@@ -88,11 +91,13 @@ class Login(Frame):
             board_size = board_size_entry.get()
             try:
                 if 10 <= int(board_size) <= 40:
-                    self.root.destroy()
+                    if (self.root):
+                        self.root.destroy()
                     self.client.set_type(1)
                     self.client.send_type(None, board_size)
                     root = Tk()
-                    board = Board(root, int(board_size), self.client)
+                    board = battle_board.Board(root, int(board_size), self.client)
+
                     board.initShipBoard()
                     board.initPositioning()
                     root.mainloop()
@@ -109,17 +114,17 @@ class Login(Frame):
         def choose_game():
             try:
                 session = game_servers.get(game_servers.curselection())
-                if "/" not in session:
+                if " / " not in session:
                     return
                 else:
-                    game_id, game_size = session.split("/")
+                    game_id, game_board_size, number_of_players = session.split(" / ")
                     self.client.send_type(game_id)
-                    # self.root.destroy()
-                    # root = Tk()
-                    # board = Board(root, 10, self.client)
-                    # board.initShipBoard()
-                    # board.initPositioning()
-                    # root.mainloop()
+                    self.root.destroy()
+                    root = Tk()
+                    board = battle_board.Board(root, int(game_board_size), self.client)
+                    board.initShipBoard()
+                    board.initPositioning()
+                    root.mainloop()
 
             except TclError:
                 return
@@ -129,7 +134,8 @@ class Login(Frame):
 
 
         def new_game():
-            self.root.destroy()
+            if (self.root):
+                self.root.destroy()
             root = Tk()
             editor = Login(root, self.client)
             editor.set_board_size()
@@ -142,7 +148,7 @@ class Login(Frame):
         join_game = Button(login_form, text='Join Game!', font=('times', 14), bg='light blue', command=choose_game)
         join_game.grid(row=0, column=0, sticky=W+E)
 
-        game_servers = Listbox(login_form, width=20, height=10, font=10, bg='ghost white', activestyle='none')
+        game_servers = Listbox(login_form, width=60, height=10, font=10, bg='ghost white', activestyle='none')
         game_servers.grid(row=1, column=0)
 
         def get_game_sessions():
@@ -150,7 +156,9 @@ class Login(Frame):
                 while True:
                     game_sessions = self.client.get_game_list()
                     if game_sessions:
-                        game_servers.insert(END, "There somme active games but fuck you!")
+                        for game_info in game_sessions:
+                            game_info = game_info.split(';')
+                            game_servers.insert(END, game_info[0] + " / " + game_info[1] + " / " + game_info[2])
                     else:
                         game_servers.insert(END, "No active games!")
                     time.sleep(3)
@@ -174,15 +182,16 @@ class Login(Frame):
 
         def check_nickname():
             nickname = nickname_entry.get()
-
             if not nickname or not self.client.isFreeName(nickname):
                 return
+            self.client.set_client_nickname(nickname)
             self.initUI()
 
         nickname_button = Button(nickname_form, text='OK!', width=10, command=check_nickname)
         nickname_button.grid(row=1, column=0, sticky=E + W, columnspan=2)
 
-root = Tk()
-editor = Login(root, None)
-editor.choose_server()
-root.mainloop()
+if __name__ == "__main__":
+    root = Tk()
+    editor = Login(root, None)
+    editor.choose_server()
+    root.mainloop()
