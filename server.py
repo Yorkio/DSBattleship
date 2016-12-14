@@ -138,9 +138,10 @@ class GameSession:
                     self.stats_for_disconnected[player] = '#'.join(message)
 
         for player in self.players:
-            self.hit_messages[player] += '4#'
+            self.hit_messages[player] = '4#'
             if hit_conditions[player] == 3:
                 hitter = player
+                self.hit_messages[player] += '4#'
 
         for player in hit_conditions:          # 4# + 0 - this player wasn't hitted, 1 - this player was hitted, 2 - this player is spectator + # list of players which ships was sinked
             if hit_conditions[player] == 0 and Players[player].type != 'Spectator':
@@ -157,6 +158,8 @@ class GameSession:
                 #for i in range(len(sinked_players)):
                 #    response += player + ';'
                 #messages[player] = messages[player][:len(messages[player]) - 1]
+
+        self.hit_messages[hitter] += str(len(hitted_players) + 2 * len(sinked_players)) + '#'
 
         for player in self.players:
             for p in sinked_players:
@@ -310,14 +313,32 @@ class Parser:
             player_login = CorrIDs[cor_id]
             if (len(subrequests) == 1 and len(GameSessions[game_session].hit_messages.keys()) == 0):
                 return '4#-1'
-            if (len(subrequests) == 1):
-                return GameSessions[game_session].hit_messages[player_login]
-
-            if (len(subrequests) < 3):
+            if (len(subrequests) == 1 and not (player_login in GameSessions[game_session].hit_messages.keys())):
                 return '4#-1'
-            coordinates = (int(subrequests[1]), int(subrequests[2]))
+
+            if (len(subrequests) == 1):
+                response = GameSessions[game_session].hit_messages[player_login]
+                GameSessions[game_session].hit_messages[player_login] = ''
+                del GameSessions[game_session].hit_messages[player_login]
+                return response
+
+            if (len(subrequests) < 2):
+                return '4#-1'
+
+            subrequests = subrequests[1].split(',')
+
+            if (len(subrequests) < 2):
+                return '4#-1'
+
+            coordinates = (int(subrequests[0]), int(subrequests[1]))
             GameSessions[game_session].makeHit(player_login, coordinates)
-            return GameSessions[game_session].hit_messages[player_login]
+
+            response = GameSessions[game_session].hit_messages[player_login]
+            GameSessions[game_session].hit_messages[player_login] = ''
+            del GameSessions[game_session].hit_messages[player_login]
+            return response
+
+
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
@@ -381,6 +402,9 @@ def on_request(ch, method, props, body):
     request = str(body)
 
     response = Parser.parse(request, props.correlation_id)
+
+    if (response[0] == '4'):
+        print 'response = ', response
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
