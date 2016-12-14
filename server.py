@@ -263,9 +263,11 @@ class Parser:
 
         if (subrequests[0] == '6'):
             game_session = PlayerGame[cor_id]
+            if (GameSessions[game_session].state == 0):
+                return '6#-1'
             if GameSessions[game_session].checkEndGame() == True:
                 owner = GameSessions[game_session].ships[0].owner_login
-                ships = []
+                GameSessions[game_session].ships = []
                 return '6#' + owner
             return '6#0'
 
