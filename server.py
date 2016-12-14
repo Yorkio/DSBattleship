@@ -292,8 +292,14 @@ class Parser:
             player_login = CorrIDs[cor_id]
             if (len(subrequests) == 1 and len(GameSessions[game_session].hit_messages.keys()) == 0):
                 return '4#-1'
+            if (not (player_login in GameSessions[game_session].hit_messages)):
+                return '4#-1'
+
             if (len(subrequests) == 1):
-                return GameSessions[game_session].hit_messages[player_login]
+                response = GameSessions[game_session].hit_messages[player_login]
+                GameSessions[game_session].hit_messages[player_login] = ''
+                del GameSessions[game_session].hit_messages[player_login]
+                return response
 
             if (len(subrequests) < 2):
                 return '4#-1'
@@ -305,7 +311,13 @@ class Parser:
 
             coordinates = (int(subrequests[0]), int(subrequests[1]))
             GameSessions[game_session].makeHit(player_login, coordinates)
-            return GameSessions[game_session].hit_messages[player_login]
+
+            response = GameSessions[game_session].hit_messages[player_login]
+            GameSessions[game_session].hit_messages[player_login] = ''
+            del GameSessions[game_session].hit_messages[player_login]
+            return response
+
+        
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
