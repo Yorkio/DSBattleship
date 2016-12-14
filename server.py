@@ -254,7 +254,10 @@ class Parser:
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
-            return '5#' + str(GameSessions[game_session].players[GameSessions[game_session].curActive])
+            if (not game_session):
+                return '5#-1'
+            return '5#' + str(GameSessions[game_session].curActive)
+            #return '5#' + str(GameSessions[game_session].players[GameSessions[game_session].curAct])
 
         if (subrequests[0] == '6'):
             game_session = PlayerGame[cor_id]
