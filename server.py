@@ -1,7 +1,7 @@
 import uuid
 import pika
 import threading
-
+import time
 
 serverID = uuid.uuid1()
 
@@ -24,7 +24,6 @@ def lifeCondition():
                           properties=pika.BasicProperties(delivery_mode=2, expiration=str(int(time * 1000))),
                           body=str(response))
     threading.Timer(time, lifeCondition).start()
-
 
 lifeCondition()
 
@@ -177,13 +176,27 @@ CorrIDs = {}
 GameSessions = {}
 PlayerGame = {}
 clientNumOfShips = 5
+cur_message_time = {}
 
+def setMessageTime(player_cor_id):
+    global cur_message_time
+    cur_message_time[player_cor_id] = time.clock()
+
+def checkClientDisconnect():
+    t = 5
+    for player_cor_id in cur_message_time:
+        if time.clock() - cur_message_time[player_cor_id] > t:
+            if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
+                Players[CorrIDs[player_cor_id]].type = 'Disconnected'
+    threading.Timer(t, checkClientDisconnect).start()
+
+checkClientDisconnect()
 
 class Parser:
     @staticmethod
     def parse(request, cor_id):
+        setMessageTime(cor_id)
         subrequests = request.split('#')
-
         if (len(subrequests) == 0):
             return
 
@@ -209,7 +222,7 @@ class Parser:
                     response_tail += str(game.id) + ';'
                     response_tail += str(game.size) + ';'
                     response_tail += str(len(game.players)) + '#'
-            print response + str(numOfActiveGames) + '#' + response_tail
+            #print response + str(numOfActiveGames) + '#' + response_tail
             return response + str(numOfActiveGames) + '#' + response_tail
 
         if (subrequests[0] == '2'):
@@ -297,6 +310,8 @@ class Parser:
             game_session = PlayerGame[cor_id]
             GameSessions[game_session].leave(player_login)
             return '10#1'
+
+
 
 
 def on_request(ch, method, props, body):
