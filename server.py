@@ -47,6 +47,7 @@ class GameSession:
 
     def leave(self, player_login):
         self.players.remove(player_login)
+        Players[player_login].sent_ships = 0
         for ship in self.ships:
             if ship.owner_login == player_login:
                 self.ships.remove(ship)
@@ -162,6 +163,9 @@ class GameSession:
         self.state = 0
         self.curActive = -1
         self.hit_messages = {}
+        self.hitconditions = {}
+        for player in self.players:
+            Players[player].sent_ships = 0
         return
 
 class Ship:
@@ -177,6 +181,7 @@ class Player:
         self.score = 0
         self.type = 'Player'  # Player, Spectator, Leaved
         self.corID = cor_id
+        self.sent_ships = 0
 
 
 Players = {}
@@ -243,6 +248,7 @@ class Parser:
             if (len(subrequests) != clientNumOfShips):
                 return '3#0'
             player_login = CorrIDs[cor_id]
+            Players[player_login].sent_ships = 1
             game_session = PlayerGame[cor_id]
             GameSessions[game_session].addShipsOfPlayer(player_login, subrequests)
             return '3#1'
