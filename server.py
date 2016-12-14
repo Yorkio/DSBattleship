@@ -390,11 +390,14 @@ class Parser:
         if (subrequests[0] == '9'):
             game_session = PlayerGame[cor_id]
             player_login = CorrIDs[cor_id]
-            message = GameSessions[game_session].hit_messages[player_login][4:]
-            del GameSessions[game_session].hit_messages[player_login]
             if (not (cor_id in CorrIDs.keys())):
                 return '9#0'
             Players[player_login].type = 'Spectator'
+            if (player_login in GameSessions[game_session].hit_messages.keys):
+                message = GameSessions[game_session].hit_messages[player_login][4:]
+                del GameSessions[game_session].hit_messages[player_login]
+            else:
+                message = '1'
             return '9#' + message
 
         if (subrequests[0] == '10'):
