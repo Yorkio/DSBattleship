@@ -92,6 +92,9 @@ class GameSession:
         self.hitconditions = {}
         self.curActive += 1
         self.curActive %= len(self.players)
+        while Players[self.players[self.curActive]].type != 'Player':
+            self.curActive += 1
+            self.curActive %= len(self.players)
         return
 
     def makeHit(self, login, coordinate):
@@ -374,7 +377,11 @@ class Parser:
 
         if (subrequests[0] == '8'):
             game_session = PlayerGame[cor_id]
-            if cor_id == Players[GameSessions[game_session].master_client].corID:
+            canStart = True
+            for player in GameSessions[game_session].players:
+                if Players[player].sent_ships == 0:
+                    canStart = False
+            if cor_id == Players[GameSessions[game_session].master_client].corID and canStart == True:
                 GameSessions[game_session].startGame()
                 return '8#1'
             return '8#0'
