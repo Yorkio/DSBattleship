@@ -10,7 +10,7 @@ class Client:
         self.server_id = ''
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=server_ip, port=5672))
-
+        self.client_nickname = None
         self.type = type
 
         self.listen_channel = self.connection.channel()
@@ -27,6 +27,13 @@ class Client:
         self.callback_queue = result.method.queue
         self.channel.basic_consume(self.on_response, no_ack=True,
                                    queue=self.callback_queue)
+
+    def get_client_nickname(self):
+        return self.client_nickname
+
+    def set_client_nickname(self, nickname):
+        self.client_nickname = nickname
+
 
     def get_client_id(self):
         return self.clientID
@@ -100,7 +107,6 @@ class Client:
     def get_number_of_players(self):
         players_requests = "7"
         server_players_repsonse = self.call(players_requests)
-        print server_players_repsonse, 'server players response'
         return Parser.parse(server_players_repsonse)
 
 
@@ -108,6 +114,15 @@ class Client:
         new_round_request = "5"
         server_new_round_response = self.call(new_round_request)
         return Parser.parse(server_new_round_response)
+
+    def handle_shoot(self, isActive, x, y):
+        if isActive:
+            shoot_request = "4#" + str(x) + ',' + str(y)
+        else:
+            shoot_request = "4"
+        server_shoot_response = self.call(shoot_request)
+        return Parser.parse(server_shoot_response)
+
 
     def win_check(self):
         new_round_request = "6"
@@ -117,5 +132,10 @@ class Client:
     def master_confirm_game(self):
         confirmation = "8"
         server_ackn_master = self.call(confirmation)
-        print server_ackn_master, 'server_ackn'
+        print server_ackn_master
         return Parser.parse(server_ackn_master)
+
+    def client_leave(self):
+        leave_request = "10"
+        server_leave_response = self.call(leave_request)
+        return Parser.parse(server_leave_response)

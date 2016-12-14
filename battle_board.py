@@ -1,7 +1,10 @@
 from Tkinter import *
 from battle_client import *
+from battle_login import *
 import threading
 import time
+from ships_generator import *
+from ScrolledText import ScrolledText
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -10,9 +13,44 @@ class Board(Frame):
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
 
+        # self.whoose_turn_label = Label(self.root, text="Your Turn", font=('New Times Romans', 14), fg='purple')
+        # self.whoose_turn_label.grid(row=0, column=3, sticky=E + W + N)
+        # self.whoose_turn_label.grid_remove()
+
+        self.isMyTurn = False
+        self.isclicked = False
+        self.current_players_info = Label(self.root, text='Current Players: ')
+        self.ifOnline = False
+
+        self.leave_button = Button(self.root, text='Leave', command=self.leave_game)
+
+
+    def leave_game(self):
+        if self.client.client_leave():
+            global placement
+            del placement[:]
+            client = self.client
+            self.root.destroy()
+            #del self
+            #root = Tk()
+            editor = Login(None, client)
+            editor.isServerChoosed = True
+            del self
+            editor.initUI()
+            #root.mainloop()
+
 
     def check_client_type(self):
         return self.client.get_type()
+
+    def initMessageBoard(self):
+        # Create message board label
+        message_board_name = Label(self.root, text='Game log!', font=('times', 14))
+        message_board_name.grid(row=2, column=0, columnspan=2)
+
+        # Create message text with schrollbar
+        self.message_board = ScrolledText(self.root, width=45, height=10, undo=True)
+        self.message_board.grid(row=3, column=0, columnspan=2)
 
     def initShipBoard(self):
         self.root.title("Battleships!")
@@ -48,8 +86,13 @@ class Board(Frame):
                 cell.pack_propagate(0)
                 cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
 
-        self.current_players_info = Label(self.root, text='Current Players: ')
-        self.current_players_info.grid(row=0, column=2)
+
+        if self.client.get_type() == 1:
+            self.current_players_info.grid(row=0, column=2)
+
+        #self.shoot_button = Button(self.root, text="SHOOT!")
+        #self.shoot_button.grid(row=)
+        self.leave_button.grid(row=1, column=2)
 
 
     def setShip(self, i, j, event):
@@ -111,7 +154,28 @@ class Board(Frame):
             self.confirm_choice.config(state="normal")
 
     def shoot(self, i, j, event):
-        event.widget.config(bg='grey')
+        try:
+            if self.isMyTurn:
+                event.widget.config(bg='grey')
+                shoot_status = self.client.handle_shoot(True, i, j)
+                self.isMyTurn = False
+                if not shoot_status:
+                    return
+                elif shoot_status[0] == '1':
+                    print shoot_status, 'shoot status if [0]'
+                    hitter, x, y = shoot_status[1].split(',')
+                    self.message_board.insert(END, hitter + ' hit in ' + x + ' ' + y + '\n')
+                    self.board[int(x)][int(y)].config(bg='red')
+                elif shoot_status[0] == '4':
+                    self.message_board.insert(END, 'Got ' + shoot_status[1] + ' points!\n')
+                if len(shoot_status[2]) != 0:
+                    sink_ships = ''
+                    for ship in shoot_status[2].split(','):
+                        sink_ships += ship + ' '
+                        self.message_board.insert(END, 'Sink info. players: ' + sink_ships + "are loosing ships!!!" '\n')
+        except AssertionError as e:
+            print e
+            pass
 
 
     def initPositioning(self):
@@ -155,7 +219,7 @@ class Board(Frame):
 
 
 
-        def reset_ships():
+        def reset_ships_():
             self.confirm_choice.config(state="disabled")
             global placement
             global ship
@@ -168,10 +232,11 @@ class Board(Frame):
                 for j in xrange(self.size):
                     self.board[i][j].config(bg="light sky blue")
 
+
         self.reset_ships_label = Label(self.root, text="Reset ships")
         self.reset_ships_label.grid(row=0, column=3, sticky=S)
 
-        self.reset_ships = Button(self.root, text="OK", width=10, command=reset_ships)
+        self.reset_ships = Button(self.root, text="OK", width=10, command=reset_ships_)
         self.reset_ships.grid(row=1, column=3, sticky=N)
 
 
@@ -181,11 +246,14 @@ class Board(Frame):
             while True:
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
-                    if self.check_client_type() == 1:
+                    if self.client.get_type() == 1:
                         self.confirm_players_button = Button(self.root,
                                                              text="Confirm the number of players",
                                                              command=self.master_confirm)
                         self.confirm_players_button.grid(row=1, column=2, sticky=E + W + N)
+                        lp = threading.Thread(target=self.listen_players, args=())
+                        lp.setDaemon(True)
+                        lp.start()
                     else:
                         t = threading.Thread(target=self.listen_server_game, args=())
                         t.setDaemon(True)
@@ -193,9 +261,7 @@ class Board(Frame):
 
                     self.destroy_positioning()
                     self.initShootBoard()
-                    t = threading.Thread(target=self.listen_players, args=())
-                    t.setDaemon(True)
-                    t.start()
+                    self.initMessageBoard()
                     break
 
         self.confirm_choice = Button(self.root, text="Start game",
@@ -206,8 +272,11 @@ class Board(Frame):
     def listen_players(self):
         try:
             while True:
-                self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
-                time.sleep(3)
+                if self.isclicked is True:
+                    return
+                if self.client.get_type() == 1:
+                    self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
+                    time.sleep(3)
         except (TclError, TypeError, AssertionError) as e:
             return
 
@@ -215,16 +284,63 @@ class Board(Frame):
 
 
     def master_confirm(self):
-        self.confirm_players_button.destroy()
-        if self.client.master_confirm_game():
-            t = threading.Thread(target=self.listen_server_game, args=())
-            t.setDaemon(True)
-            t.start()
+        response = self.client.master_confirm_game()
+        print response
+        if response:
+            self.confirm_players_button.destroy()
+            self.isclicked = True
+            d = threading.Thread(target=self.listen_server_game, args=())
+            d.setDaemon(True)
+            d.start()
+        else:
+            return
 
     def listen_server_game(self):
-        while not self.client.win_check():
-            if self.client.new_round_check() == self.client.get_client_id():
-                print "my turn"
+        try:
+            while True:
+                end_connection = 0
+                response = self.client.win_check()
+                if response == 'wait':
+                    time.sleep(3)
+                    continue
+                if not response:
+                    if self.client.new_round_check() == self.client.get_client_nickname():
+                        self.isMyTurn = True
+                        self.message_board.insert(END, 'Your turn! \n')
+                        time.sleep(3)
+                    else:
+                        self.isMyTurn = False
+                        time.sleep(3)
+                    shoot_status = self.client.handle_shoot(False, None, None)
+                    while True:
+                        if not shoot_status:
+                            if end_connection == 10:
+                                print 'Lost connection'
+                                break
+                            shoot_status = self.client.handle_shoot(False, None, None)
+                            time.sleep(1)
+                            end_connection += 1
+                            continue
+                        else:
+                            if shoot_status[0] == '1':
+                                hitter, x, y = shoot_status[1].split(',')
+                                self.message_board.insert(END, hitter + ' hit in ' + x + ' ' + y + '\n')
+                                self.board[int(x)][int(y)].config(bg='red')
+                            if shoot_status[0] == '4':
+                                self.message_board.insert(END, 'Got ' + shoot_status[1] + ' points! \n')
+
+                            if len(shoot_status[2]) != 0:
+                                print shoot_status[2], 'shoot status[2]'
+                                sink_ships = ''
+                                for ship in shoot_status[2].split(','):
+                                    sink_ships += ship + ' '
+                                self.message_board.insert(END,
+                                                            'Sink info. players:' + sink_ships + "loosing ships!!!" '\n')
+                            break
+        except AssertionError as e:
+            pass
+        except TypeError:
+            return
 
 
     def destroy_positioning(self):

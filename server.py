@@ -333,7 +333,6 @@ class Parser:
 
             if (len(subrequests) == 1):
                 response = GameSessions[game_session].hit_messages[player_login]
-                GameSessions[game_session].hit_messages[player_login] = ''
                 del GameSessions[game_session].hit_messages[player_login]
                 return response
 
@@ -389,11 +388,14 @@ class Parser:
             return '8#0'
 
         if (subrequests[0] == '9'):
+            game_session = PlayerGame[cor_id]
+            player_login = CorrIDs[cor_id]
+            message = GameSessions[game_session].hit_messages[player_login][4:]
+            del GameSessions[game_session].hit_messages[player_login]
             if (not (cor_id in CorrIDs.keys())):
                 return '9#0'
-            player_login = CorrIDs[cor_id]
             Players[player_login].type = 'Spectator'
-            return '9#1'
+            return '9#' + message
 
         if (subrequests[0] == '10'):
             if (not (cor_id in CorrIDs.keys())):
@@ -414,6 +416,10 @@ class Parser:
                 GameSessions[game_session].restart = subrequests[1]
                 GameSessions[game_session].restartGame()
             return '11#' + str(GameSessions[game_session].restart)
+
+        if (subrequests[0] == '12'):
+            game_session = PlayerGame[cor_id]
+            return "12#" + GameSessions[game_session].master_client
 
 
 
