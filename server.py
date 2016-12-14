@@ -41,6 +41,7 @@ class GameSession:
         self.curActive = -1
         self.hit_messages = {}
         self.restart = 0
+        self.stats_for_disconnected = {}
 
     def disconnect(self, player_id):
         return 0
@@ -121,7 +122,23 @@ class GameSession:
 
     def makeStats(self, hit_conditions, hitted_players, sinked_players, coordinate):
         self.hit_messages = dict.fromkeys(self.players, '')
+        self.history[self.current_round] = ''
         hitter = ''
+        for player in self.players:
+            if Players[player].type == 'Disconnected' or Players[player].type == 'Just_reconnected':
+                if player not in self.stats_for_disconnected:
+                    self.stats_for_disconnected[player] = '4#5#' + str(1) + '#' + str(coordinate[0]) + ',' + str(coordinate[1])
+                else:
+                    message = self.stats_for_disconnected[player].split('#')
+                    message[2] =str(int(message[2]) + 1)
+                    message[3] += ';' + str(coordinate[0]) + ',' + str(coordinate[1])
+                    message[4] += ','
+                    for p in sinked_players:
+                        message[4] += p + ','
+                    message[4] = message[4][:len(message[4]) - 1]
+                    self.stats_for_disconnected[player] = '#'.join(message)
+                    if Players[player].type == 'Just_reconnected':
+                        self.hit_messages[player] = self.stats_for_disconnected[player]
 
         for player in self.players:
             self.hit_messages[player] += '4#'
@@ -148,6 +165,10 @@ class GameSession:
             for p in sinked_players:
                 self.hit_messages[player] += p + ','
             self.hit_messages[player] = self.hit_messages[player][:len(self.hit_messages[player]) - 1]
+
+        for player in self.players:
+            if Players[player].type == 'Just_reconnected':
+                self.hit_messages[player] = self.stats_for_disconnected[player]
 
         self.newRound()
 
@@ -196,9 +217,10 @@ def setMessageTime(player_cor_id):
     cur_message_time[player_cor_id] = time.clock()
     #print cur_message_time
     if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Disconnected':
-        Players[CorrIDs[player_cor_id]].type = 'Player'
+        Players[CorrIDs[player_cor_id]].type = 'Just_reconnected'
         print "Player", CorrIDs[player_cor_id], "returned to the game"
-
+    if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Just_reconnected':
+        Players[CorrIDs[player_cor_id]].type = 'Player'
 def checkClientDisconnect():
     t = 5
     for player_cor_id in cur_message_time:
@@ -208,13 +230,13 @@ def checkClientDisconnect():
                 if CorrIDs[player_cor_id] == master_login:
                     active_palyers = []
                     for player in GameSessions[PlayerGame[player_cor_id]].players:
-                        if Players[player].type != 'Disconnected':
+                        if Players[player].type != 'Disconnected' and Players[player].type != 'Spectator':
                             active_palyers.append(player)
                     if len(active_palyers) != 0:
                         new_master_client = choice(active_palyers)
                         GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
                         print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
-            if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
+            if Players[CorrIDs[player_cor_id]].type != 'Disconnected' and Players[CorrIDs[player_cor_id]].type != 'Spectator':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
                 print "Player", CorrIDs[player_cor_id], "disconnected"
     threading.Timer(t, checkClientDisconnect).start()
