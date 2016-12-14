@@ -136,8 +136,6 @@ class GameSession:
                         message[4] += p + ','
                     message[4] = message[4][:len(message[4]) - 1]
                     self.stats_for_disconnected[player] = '#'.join(message)
-                    if Players[player].type == 'Just_reconnected':
-                        self.hit_messages[player] = self.stats_for_disconnected[player]
 
         for player in self.players:
             self.hit_messages[player] += '4#'
@@ -221,6 +219,7 @@ def setMessageTime(player_cor_id):
         print "Player", CorrIDs[player_cor_id], "returned to the game"
     if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Just_reconnected':
         Players[CorrIDs[player_cor_id]].type = 'Player'
+
 def checkClientDisconnect():
     t = 5
     for player_cor_id in cur_message_time:
