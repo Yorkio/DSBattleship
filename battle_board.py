@@ -2,6 +2,8 @@ from Tkinter import *
 from battle_client import *
 import threading
 import time
+from ships_generator import *
+
 
 class Board(Frame):
     def __init__(self, root, size, client):
@@ -10,9 +12,11 @@ class Board(Frame):
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
 
-        self.whoose_turn_label = Label(self.root, text="Your Turn", font=('New Times Romans', 14), fg='purple')
-        self.whoose_turn_label.grid(row=0, column=3, sticky=E + W + N)
-        self.whoose_turn_label.grid_remove()
+        # self.whoose_turn_label = Label(self.root, text="Your Turn", font=('New Times Romans', 14), fg='purple')
+        # self.whoose_turn_label.grid(row=0, column=3, sticky=E + W + N)
+        # self.whoose_turn_label.grid_remove()
+        self.isclicked = False
+        self.current_players_info = Label(self.root, text='Current Players: ')
 
     def check_client_type(self):
         return self.client.get_type()
@@ -51,8 +55,9 @@ class Board(Frame):
                 cell.pack_propagate(0)
                 #cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
 
-        self.current_players_info = Label(self.root, text='Current Players: ')
-        self.current_players_info.grid(row=0, column=2)
+
+        if self.client.get_type() == 1:
+            self.current_players_info.grid(row=0, column=2)
 
         #self.shoot_button = Button(self.root, text="SHOOT!")
         #self.shoot_button.grid(row=)
@@ -162,7 +167,7 @@ class Board(Frame):
 
 
 
-        def reset_ships():
+        def reset_ships_():
             self.confirm_choice.config(state="disabled")
             global placement
             global ship
@@ -175,10 +180,11 @@ class Board(Frame):
                 for j in xrange(self.size):
                     self.board[i][j].config(bg="light sky blue")
 
+
         self.reset_ships_label = Label(self.root, text="Reset ships")
         self.reset_ships_label.grid(row=0, column=3, sticky=S)
 
-        self.reset_ships = Button(self.root, text="OK", width=10, command=reset_ships)
+        self.reset_ships = Button(self.root, text="OK", width=10, command=reset_ships_)
         self.reset_ships.grid(row=1, column=3, sticky=N)
 
 
@@ -188,11 +194,14 @@ class Board(Frame):
             while True:
                 send_coordinates = self.client.send_ships(ships_coordinates)
                 if send_coordinates:
-                    if self.check_client_type() == 1:
+                    if self.client.get_type() == 1:
                         self.confirm_players_button = Button(self.root,
                                                              text="Confirm the number of players",
                                                              command=self.master_confirm)
                         self.confirm_players_button.grid(row=1, column=2, sticky=E + W + N)
+                        lp = threading.Thread(target=self.listen_players, args=())
+                        lp.setDaemon(True)
+                        lp.start()
                     else:
                         t = threading.Thread(target=self.listen_server_game, args=())
                         t.setDaemon(True)
@@ -200,9 +209,6 @@ class Board(Frame):
 
                     self.destroy_positioning()
                     self.initShootBoard()
-                    lp = threading.Thread(target=self.listen_players, args=())
-                    lp.setDaemon(True)
-                    lp.start()
                     break
 
         self.confirm_choice = Button(self.root, text="Start game",
@@ -214,8 +220,11 @@ class Board(Frame):
     def listen_players(self):
         try:
             while True:
-                self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
-                time.sleep(3)
+                if self.isclicked is True:
+                    return
+                if self.client.get_type() == 1:
+                    self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
+                    time.sleep(3)
         except (TclError, TypeError, AssertionError) as e:
             return
 
@@ -224,19 +233,26 @@ class Board(Frame):
 
     def master_confirm(self):
         self.confirm_players_button.destroy()
+        self.isclicked = True
         if self.client.master_confirm_game():
             d = threading.Thread(target=self.listen_server_game, args=())
             d.setDaemon(True)
             d.start()
 
     def listen_server_game(self):
-        while not self.client.win_check():
-            if self.client.new_round_check() == self.client.get_client_nickname():
+        while True:
+            response = self.client.win_check()
+            print response
+            if response == 'wait':
                 time.sleep(3)
-                print 'my turn'
+                continue
+            if not response:
+                if self.client.new_round_check() == self.client.get_client_nickname():
+                    time.sleep(3)
+                else:
+                    time.sleep(3)
             else:
-                time.sleep(3)
-                print 'not my turn'
+                return
 
 
     def destroy_positioning(self):

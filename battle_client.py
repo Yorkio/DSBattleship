@@ -113,6 +113,7 @@ class Client:
     def new_round_check(self):
         new_round_request = "5"
         server_new_round_response = self.call(new_round_request)
+        print server_new_round_response, 'new round check'
         return Parser.parse(server_new_round_response)
 
     def win_check(self):
