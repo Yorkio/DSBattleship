@@ -210,9 +210,10 @@ def checkClientDisconnect():
                     for player in GameSessions[PlayerGame[player_cor_id]].players:
                         if Players[player].type != 'Disconnected':
                             active_palyers.append(player)
-                    new_master_client = choice(active_palyers)
-                    GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
-                    print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
+                    if len(active_palyers) != 0:
+                        new_master_client = choice(active_palyers)
+                        GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
+                        print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
             if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
                 print "Player", CorrIDs[player_cor_id], "disconnected"
