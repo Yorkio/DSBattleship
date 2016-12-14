@@ -283,7 +283,7 @@ class Parser:
 
         if (subrequests[0] == '9'):
             if (not (cor_id in CorrIDs.keys())):
-                return '10#0'
+                return '9#0'
             player_login = CorrIDs[cor_id]
             Players[player_login].type = 'Spectator'
             return '9#1'
