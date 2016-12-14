@@ -40,6 +40,7 @@ class GameSession:
         self.size = size
         self.curActive = -1
         self.hit_messages = {}
+        self.restart = 0
 
     def disconnect(self, player_id):
         return 0
@@ -154,8 +155,14 @@ class GameSession:
         for i in range(1, len(self.ships)):
             if self.ships[i].owner_login != owner:
                 return False
+        self.restart = 0
         return True
 
+    def restartGame(self):
+        self.state = 0
+        self.curActive = -1
+        self.hit_messages = {}
+        return
 
 class Ship:
     def __init__(self, owner_login, length, coordinates):
@@ -298,6 +305,17 @@ class Parser:
             GameSessions[game_session].leave(player_login)
             return '10#1'
 
+        if (subrequests[0] == '11'):
+            if (not (cor_id in CorrIDs.keys())):
+                return '11#-1'
+            player_login = CorrIDs[cor_id]
+            game_session = PlayerGame[cor_id]
+            if (len(subrequests) > 1 and GameSessions[game_session].master_client == player_login):
+                if (subrequests[1] != '1' and subrequests[1] != '2'):
+                    return '11#-1'
+                GameSessions[game_session].restart = subrequests[1]
+                GameSessions[game_session].restartGame()
+            return '11#' + str(GameSessions[game_session].restart)
 
 def on_request(ch, method, props, body):
     request = str(body)
