@@ -41,6 +41,7 @@ class GameSession:
         self.curActive = -1
         self.hit_messages = {}
         self.restart = 0
+        self.stats_for_disconnected = {}
 
     def disconnect(self, player_id):
         return 0
@@ -93,6 +94,9 @@ class GameSession:
         self.hitconditions = {}
         self.curActive += 1
         self.curActive %= len(self.players)
+        while Players[self.players[self.curActive]].type != 'Player':
+            self.curActive += 1
+            self.curActive %= len(self.players)
         return
 
     def makeHit(self, login, coordinate):
@@ -124,6 +128,19 @@ class GameSession:
     def makeStats(self, hit_conditions, hitted_players, sinked_players, coordinate):
         self.hit_messages = dict.fromkeys(self.players, '')
         hitter = ''
+        for player in self.players:
+            if Players[player].type == 'Disconnected' or Players[player].type == 'Just_reconnected':
+                if player not in self.stats_for_disconnected:
+                    self.stats_for_disconnected[player] = '4#5#' + str(1) + '#' + str(coordinate[0]) + ',' + str(coordinate[1])
+                else:
+                    message = self.stats_for_disconnected[player].split('#')
+                    message[2] =str(int(message[2]) + 1)
+                    message[3] += ';' + str(coordinate[0]) + ',' + str(coordinate[1])
+                    message[4] += ','
+                    for p in sinked_players:
+                        message[4] += p + ','
+                    message[4] = message[4][:len(message[4]) - 1]
+                    self.stats_for_disconnected[player] = '#'.join(message)
 
         for player in self.players:
             self.hit_messages[player] = '4#'
@@ -154,6 +171,10 @@ class GameSession:
                 self.hit_messages[player] += p + ','
             self.hit_messages[player] = self.hit_messages[player][:len(self.hit_messages[player]) - 1]
 
+        for player in self.players:
+            if Players[player].type == 'Just_reconnected':
+                self.hit_messages[player] = self.stats_for_disconnected[player]
+
         self.newRound()
 
     def checkEndGame(self):
@@ -169,6 +190,7 @@ class GameSession:
         self.curActive = -1
         self.hit_messages = {}
         self.hitconditions = {}
+        self.stats_for_disconnected = {}
         for player in self.players:
             Players[player].sent_ships = 0
         return
@@ -201,8 +223,10 @@ def setMessageTime(player_cor_id):
     cur_message_time[player_cor_id] = time.clock()
     #print cur_message_time
     if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Disconnected':
-        Players[CorrIDs[player_cor_id]].type = 'Player'
+        Players[CorrIDs[player_cor_id]].type = 'Just_reconnected'
         print "Player", CorrIDs[player_cor_id], "returned to the game"
+    if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Just_reconnected':
+        Players[CorrIDs[player_cor_id]].type = 'Player'
 
 def checkClientDisconnect():
     t = 5
@@ -215,13 +239,13 @@ def checkClientDisconnect():
                 if CorrIDs[player_cor_id] == master_login:
                     active_palyers = []
                     for player in GameSessions[PlayerGame[player_cor_id]].players:
-                        if Players[player].type != 'Disconnected':
+                        if Players[player].type != 'Disconnected' and Players[player].type != 'Spectator':
                             active_palyers.append(player)
                     if len(active_palyers) != 0:
                         new_master_client = choice(active_palyers)
                         GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
                         print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
-            if Players[CorrIDs[player_cor_id]].type != 'Disconnected':
+            if Players[CorrIDs[player_cor_id]].type != 'Disconnected' and Players[CorrIDs[player_cor_id]].type != 'Spectator':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
                 print "Player", CorrIDs[player_cor_id], "disconnected"
             if (disconnect_time > time_for_kick_out):
@@ -309,7 +333,6 @@ class Parser:
 
             if (len(subrequests) == 1):
                 response = GameSessions[game_session].hit_messages[player_login]
-                GameSessions[game_session].hit_messages[player_login] = ''
                 del GameSessions[game_session].hit_messages[player_login]
                 return response
 
@@ -355,17 +378,27 @@ class Parser:
 
         if (subrequests[0] == '8'):
             game_session = PlayerGame[cor_id]
-            if cor_id == Players[GameSessions[game_session].master_client].corID:
+            canStart = True
+            for player in GameSessions[game_session].players:
+                if Players[player].sent_ships == 0:
+                    canStart = False
+            if cor_id == Players[GameSessions[game_session].master_client].corID and canStart == True:
                 GameSessions[game_session].startGame()
                 return '8#1'
             return '8#0'
 
         if (subrequests[0] == '9'):
+            game_session = PlayerGame[cor_id]
+            player_login = CorrIDs[cor_id]
             if (not (cor_id in CorrIDs.keys())):
                 return '9#0'
-            player_login = CorrIDs[cor_id]
             Players[player_login].type = 'Spectator'
-            return '9#1'
+            if (player_login in GameSessions[game_session].hit_messages.keys):
+                message = GameSessions[game_session].hit_messages[player_login][4:]
+                del GameSessions[game_session].hit_messages[player_login]
+            else:
+                message = '1'
+            return '9#' + message
 
         if (subrequests[0] == '10'):
             if (not (cor_id in CorrIDs.keys())):
@@ -386,6 +419,10 @@ class Parser:
                 GameSessions[game_session].restart = subrequests[1]
                 GameSessions[game_session].restartGame()
             return '11#' + str(GameSessions[game_session].restart)
+
+        if (subrequests[0] == '12'):
+            game_session = PlayerGame[cor_id]
+            return "12#" + GameSessions[game_session].master_client
 
 
 
