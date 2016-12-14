@@ -6,8 +6,6 @@ import time
 from ships_generator import *
 from ScrolledText import ScrolledText
 
-temp_var = 0
-
 class Board(Frame):
     def __init__(self, root, size, client):
         self.client = client
