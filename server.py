@@ -415,6 +415,10 @@ class Parser:
                 GameSessions[game_session].restartGame()
             return '11#' + str(GameSessions[game_session].restart)
 
+        if (subrequests[0] == '12'):
+            game_session = PlayerGame[cor_id]
+            return "12#" + GameSessions[game_session].master_client
+
 
 
 def on_request(ch, method, props, body):
