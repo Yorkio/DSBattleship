@@ -44,10 +44,10 @@ class GameSession:
     def disconnect(self, player_id):
         return 0
 
-    def leave(self, player_id):
-        self.players[player_id] = 'Leaved'
+    def leave(self, player_login):
+        self.players.remove(player_login)
         for ship in self.ships:
-            if ship.owner_login == player_id:
+            if ship.owner_login == player_login:
                 self.ships.remove(ship)
 
     def addPlayer(self, login):
@@ -74,6 +74,8 @@ class GameSession:
     def startGame(self):
         self.state = 1
         self.newRound()
+        for player in self.players:
+            Players[player].type = 'Player'
         return 0
 
     def currentActivePlayers(self):
@@ -254,7 +256,7 @@ class Parser:
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
-            if (not game_session or GameSessions[game_session].state == 0):
+            if ((not (game_session in GameSessions.keys())) or GameSessions[game_session].state == 0):
                 return '5#-1'
             active = GameSessions[game_session].curActive
             return '5#' + str(GameSessions[game_session].players[active])
@@ -279,13 +281,26 @@ class Parser:
                 return '8#1'
             return '8#0'
 
+        if (subrequests[0] == '9'):
+            if (not (cor_id in CorrIDs.keys())):
+                return '9#0'
+            player_login = CorrIDs[cor_id]
+            Players[player_login].type = 'Spectator'
+            return '9#1'
+
+        if (subrequests[0] == '10'):
+            if (not (cor_id in CorrIDs.keys())):
+                return '10#0'
+            player_login = CorrIDs[cor_id]
+            game_session = PlayerGame[cor_id]
+            GameSessions[game_session].leave(player_login)
+            return '10#1'
+
 
 def on_request(ch, method, props, body):
     request = str(body)
 
     response = Parser.parse(request, props.correlation_id)
-
-    #print 'response = ', response
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
