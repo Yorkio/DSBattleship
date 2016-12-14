@@ -52,6 +52,8 @@ class GameSession:
         for ship in self.ships:
             if ship.owner_login == player_login:
                 self.ships.remove(ship)
+        if (self.curActive == player_login):
+            self.newRound()
 
     def addPlayer(self, login):
         self.players.append(login)
@@ -228,8 +230,10 @@ def setMessageTime(player_cor_id):
 
 def checkClientDisconnect():
     t = 5
+    time_for_kick_out = 600
     for player_cor_id in cur_message_time:
-        if time.clock() - cur_message_time[player_cor_id] > t:
+        if time.clock() - cur_message_time[player_cor_id] > t and Players[CorrIDs[player_cor_id]].sent_ships == 1:
+            disconnect_time = time.clock() - cur_message_time[player_cor_id]
             if len(GameSessions) != 0:
                 master_login = GameSessions[PlayerGame[player_cor_id]].master_client
                 if CorrIDs[player_cor_id] == master_login:
@@ -244,6 +248,14 @@ def checkClientDisconnect():
             if Players[CorrIDs[player_cor_id]].type != 'Disconnected' and Players[CorrIDs[player_cor_id]].type != 'Spectator':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
                 print "Player", CorrIDs[player_cor_id], "disconnected"
+            if (disconnect_time > time_for_kick_out):
+                game_session = PlayerGame[player_cor_id]
+                GameSessions[game_session].leave(CorrIDs[player_cor_id])
+                del Players[CorrIDs[player_cor_id]]
+                del CorrIDs[player_cor_id]
+                del PlayerGame[player_cor_id]
+                del cur_message_time[player_cor_id]
+                print "Player", CorrIDs[player_cor_id], "left the server(was disconnected for too long time)"
     threading.Timer(t, checkClientDisconnect).start()
 
 checkClientDisconnect()
