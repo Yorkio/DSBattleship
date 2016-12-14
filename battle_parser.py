@@ -15,7 +15,8 @@ class Parser:
             if subrequests[1] == "0":
                 return False
             else:
-                return subrequests[4:]
+                del subrequests[-1]
+                return subrequests[2:]
 
         elif subrequests[0] == "2":
             if subrequests[1] == "1":
@@ -27,12 +28,24 @@ class Parser:
                 return True
             return False
 
+        elif subrequests[0] == "4":
+            if subrequests[1] == "0":
+                return False
+
+        elif subrequests[0] == '5':
+            if subrequests[1] == "0":
+                return False
+            return subrequests[1]
+
+        elif subrequests[0] == '6':
+            if subrequests[1] == "0":
+                return False
+            return subrequests[1]
+
         elif subrequests[0] == "7":
             if subrequests[1] == "0":
                 return False
-            return subrequests[2]
-
-
+            return subrequests[1]
 
         elif subrequests[0] == "8":
             if subrequests[1] == "1":

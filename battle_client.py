@@ -10,7 +10,7 @@ class Client:
         self.server_id = ''
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=server_ip, port=5672))
-
+        self.client_nickname = None
         self.type = type
 
         self.listen_channel = self.connection.channel()
@@ -27,6 +27,16 @@ class Client:
         self.callback_queue = result.method.queue
         self.channel.basic_consume(self.on_response, no_ack=True,
                                    queue=self.callback_queue)
+
+    def get_client_nickname(self):
+        return self.client_nickname
+
+    def set_client_nickname(self, nickname):
+        self.client_nickname = nickname
+
+
+    def get_client_id(self):
+        return self.clientID
 
     def get_server_id(self):
         return self.server_id
@@ -83,6 +93,7 @@ class Client:
     def send_type(self, game_id=None, size=None):
         if self.type == 0:
             game_connection_request = "#".join(("2", "1", game_id))
+            print game_connection_request
         elif self.type == 1:
             game_connection_request = "#".join(( "2", "0", size))
         game_connection_response = self.call(game_connection_request)
@@ -98,5 +109,18 @@ class Client:
         server_players_repsonse = self.call(players_requests)
         return Parser.parse(server_players_repsonse)
 
+
+    def new_round_check(self):
+        new_round_request = "5"
+        server_new_round_response = self.call(new_round_request)
+        return Parser.parse(server_new_round_response)
+
+    def win_check(self):
+        new_round_request = "6"
+        server_new_round_request = self.call(new_round_request)
+        return Parser.parse(server_new_round_request)
+
     def master_confirm_game(self):
         confirmation = "8"
+        server_ackn_master = self.call(confirmation)
+        return Parser.parse(server_ackn_master)

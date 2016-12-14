@@ -39,13 +39,9 @@ class Login(Frame):
             except TclError:
                 return
 
-
-
         server_select_button = Button(avaliable_servers_frame, text="OK!",
                                       font=('times', 14), bg='ghost white', command=choose_server)
         server_select_button.grid(row=2, column=0, sticky=W+E)
-
-
 
         def get_avaliable_servers():
             try:
@@ -109,17 +105,17 @@ class Login(Frame):
         def choose_game():
             try:
                 session = game_servers.get(game_servers.curselection())
-                if "/" not in session:
+                if " / " not in session:
                     return
                 else:
-                    game_id, game_size = session.split("/")
+                    game_id, game_board_size, number_of_players = session.split(" / ")
                     self.client.send_type(game_id)
-                    # self.root.destroy()
-                    # root = Tk()
-                    # board = Board(root, 10, self.client)
-                    # board.initShipBoard()
-                    # board.initPositioning()
-                    # root.mainloop()
+                    self.root.destroy()
+                    root = Tk()
+                    board = Board(root, int(game_board_size), self.client)
+                    board.initShipBoard()
+                    board.initPositioning()
+                    root.mainloop()
 
             except TclError:
                 return
@@ -142,7 +138,7 @@ class Login(Frame):
         join_game = Button(login_form, text='Join Game!', font=('times', 14), bg='light blue', command=choose_game)
         join_game.grid(row=0, column=0, sticky=W+E)
 
-        game_servers = Listbox(login_form, width=20, height=10, font=10, bg='ghost white', activestyle='none')
+        game_servers = Listbox(login_form, width=60, height=10, font=10, bg='ghost white', activestyle='none')
         game_servers.grid(row=1, column=0)
 
         def get_game_sessions():
@@ -151,9 +147,8 @@ class Login(Frame):
                     game_sessions = self.client.get_game_list()
                     if game_sessions:
                         for game_info in game_sessions:
-                            game_info = game_info.split(',')
-                            for game_id, game_size, number_of_players in game_info:
-                                game_servers.insert(END, game_id + "/" + game_size + "/" + number_of_players)
+                            game_info = game_info.split(';')
+                            game_servers.insert(END, game_info[0] + " / " + game_info[1] + " / " + game_info[2])
                     else:
                         game_servers.insert(END, "No active games!")
                     time.sleep(3)
@@ -177,10 +172,9 @@ class Login(Frame):
 
         def check_nickname():
             nickname = nickname_entry.get()
-            print self.client.server_id
-
             if not nickname or not self.client.isFreeName(nickname):
                 return
+            self.client.set_client_nickname(nickname)
             self.initUI()
 
         nickname_button = Button(nickname_form, text='OK!', width=10, command=check_nickname)

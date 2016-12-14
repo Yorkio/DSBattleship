@@ -10,6 +10,9 @@ class Board(Frame):
         self.board = [[None] * self.size for _ in xrange(self.size)]
         self.root = root
 
+        self.whoose_turn_label = Label(self.root, text="Your Turn", font=('New Times Romans', 14), fg='purple')
+        self.whoose_turn_label.grid(row=0, column=3, sticky=E + W + N)
+        self.whoose_turn_label.grid_remove()
 
     def check_client_type(self):
         return self.client.get_type()
@@ -46,10 +49,14 @@ class Board(Frame):
                 cell = Label(shoot_panel, text=' ' * 10, bg='white')
                 cell.grid(row=i, column=j, padx=1, pady=1)
                 cell.pack_propagate(0)
-                cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
+                #cell.bind('<Button-1>',lambda e, i=i, j=j: self.shoot(i,j,e))
 
         self.current_players_info = Label(self.root, text='Current Players: ')
         self.current_players_info.grid(row=0, column=2)
+
+        #self.shoot_button = Button(self.root, text="SHOOT!")
+        #self.shoot_button.grid(row=)
+
 
 
     def setShip(self, i, j, event):
@@ -147,7 +154,6 @@ class Board(Frame):
         self.set_direction = Button(self.root, text='Horizontally', command=change_direction)
         self.set_direction.grid(row=1, column=1, sticky=N)
 
-
         self.ship_label = Label(self.root, text="Current ship:")
         self.ship_label.grid(row=0, column=2, sticky=S)
 
@@ -186,9 +192,17 @@ class Board(Frame):
                         self.confirm_players_button = Button(self.root,
                                                              text="Confirm the number of players",
                                                              command=self.master_confirm)
-                        self.confirm_players_button.grid(row=1, column=2, sticky=E + W+ N)
+                        self.confirm_players_button.grid(row=1, column=2, sticky=E + W + N)
+                    else:
+                        t = threading.Thread(target=self.listen_server_game, args=())
+                        t.setDaemon(True)
+                        t.start()
+
                     self.destroy_positioning()
                     self.initShootBoard()
+                    lp = threading.Thread(target=self.listen_players, args=())
+                    lp.setDaemon(True)
+                    lp.start()
                     break
 
         self.confirm_choice = Button(self.root, text="Start game",
@@ -196,22 +210,33 @@ class Board(Frame):
 
         self.confirm_choice.grid(row=2, column=1, sticky=E + W, columnspan=3)
 
+
     def listen_players(self):
         try:
-            self.current_players_info.config(text=self.client.get_number_of_players())
-            time.sleep(3)
-        except TclError:
+            while True:
+                self.current_players_info.config(text="Number of players: " + self.client.get_number_of_players())
+                time.sleep(3)
+        except (TclError, TypeError, AssertionError) as e:
             return
 
-        # t = threading.Thread(target=self.listen_players, args=())
-        # t.setDaemon(True)
-        # t.start()
+    #def listen_shoot(self):
+
 
     def master_confirm(self):
         self.confirm_players_button.destroy()
         if self.client.master_confirm_game():
-            print 'lol'
+            d = threading.Thread(target=self.listen_server_game, args=())
+            d.setDaemon(True)
+            d.start()
 
+    def listen_server_game(self):
+        while not self.client.win_check():
+            if self.client.new_round_check() == self.client.get_client_nickname():
+                time.sleep(3)
+                print 'my turn'
+            else:
+                time.sleep(3)
+                print 'not my turn'
 
 
     def destroy_positioning(self):
