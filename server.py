@@ -292,7 +292,7 @@ class Parser:
             player_login = CorrIDs[cor_id]
             if (len(subrequests) == 1 and len(GameSessions[game_session].hit_messages.keys()) == 0):
                 return '4#-1'
-            if (not (player_login in GameSessions[game_session].hit_messages)):
+            if (len(subrequests) == 1 and not (player_login in GameSessions[game_session].hit_messages.keys())):
                 return '4#-1'
 
             if (len(subrequests) == 1):
@@ -317,7 +317,7 @@ class Parser:
             del GameSessions[game_session].hit_messages[player_login]
             return response
 
-        
+
 
         if (subrequests[0] == '5'):
             game_session = PlayerGame[cor_id]
