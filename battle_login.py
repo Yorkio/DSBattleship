@@ -205,6 +205,7 @@ class Login(Frame):
         def check_nickname():
             nickname = nickname_entry.get()
             if not nickname or not self.client.isFreeName(nickname):
+                tkMessageBox.showerror("Error!", "Please, enter another nickname. The one you provided is not available.")
                 return
             self.client.set_client_nickname(nickname)
             self.initUI()
