@@ -359,7 +359,7 @@ class Parser:
             if ((not (game_session in GameSessions.keys())) or GameSessions[game_session].state == 0):
                 return '5#-1'
             active = GameSessions[game_session].curActive
-            if (Players[GameSessions[game_session].players[active]].type == 'Spectator'):
+            if (GameSessions[game_session].players[active] in Players.keys() and Players[GameSessions[game_session].players[active]].type == 'Spectator'):
                 GameSessions[game_session].newRound()
             return '5#' + str(GameSessions[game_session].players[active])
 
