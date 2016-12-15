@@ -291,7 +291,7 @@ class Parser:
     @staticmethod
     def parse(request, cor_id):
         # method which parse clients requests and return the respond which will be sent using RPC pattern. Protocol of parsing attached with the report
-        print request
+        #print request
         setMessageTime(cor_id)
         subrequests = request.split('#')
         if (len(subrequests) == 0):
