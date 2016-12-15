@@ -257,7 +257,7 @@ class Board(Frame):
                     sink_ships = ''
                     for ship in shoot_status[2].split(','):
                         sink_ships += ship + ' '
-                    self.message_board.insert(END, 'Sink info. players:: ' + sink_ships + "are loosing ships!!!" '\n')
+                    self.message_board.insert(END, 'Sink info. players: ' + sink_ships + "are loosing ships!!!" '\n')
                 return
         except AssertionError as e:
             #print e
