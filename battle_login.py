@@ -1,6 +1,6 @@
 from Tkinter import *
 from battle_client import *
-from battle_board import *
+import battle_board
 import tkMessageBox
 import threading
 import time
@@ -116,7 +116,9 @@ class Login(Frame):
                     self.client.set_type(1)
                     self.client.send_type(None, board_size)
                     root = Tk()
-                    board = Board(root, int(board_size), self.client)
+
+                    board = battle_board.Board(root, int(board_size), self.client)
+
 
                     board.initShipBoard()
                     board.initPositioning()
@@ -141,7 +143,8 @@ class Login(Frame):
                     self.client.send_type(game_id)
                     self.root.destroy()
                     root = Tk()
-                    board = Board(root, int(game_board_size), self.client)
+                    
+                    board = battle_board.Board(root, int(game_board_size), self.client)
                     board.initShipBoard()
                     board.initPositioning()
                     root.mainloop()

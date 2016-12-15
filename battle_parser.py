@@ -1,10 +1,7 @@
-
 """
 Static class
 Parse the incoming message from the server and return the appropriate value
 """
-
-
 
 class Parser:
     @staticmethod

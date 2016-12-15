@@ -2,9 +2,9 @@ from battle_parser import *
 import uuid
 import pika
 
-
 """
 #Class to specify the type of the client and send the appropriate requests
+
 
 # Main methods:
 
