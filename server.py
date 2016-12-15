@@ -13,11 +13,14 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 
 channel = connection.channel()
 
+# queue with all messages
 channel.queue_declare(queue='rpc_queue_durable_' + str(serverID), durable=True)
+# queue with current active servers
 channel.queue_declare(queue='servers_queue', durable=True)
 
 
 def lifeCondition():
+    # send to servers_queue all active servers
     time = 0.1
     response = str(serverID)
     channel.basic_publish(exchange='',
@@ -30,6 +33,7 @@ lifeCondition()
 
 
 class GameSession:
+    # class which contatins information about game session
     def __init__(self, login, size):
         self.id = str(uuid.uuid4())
         self.ships = []
@@ -43,10 +47,8 @@ class GameSession:
         self.restart = 0
         self.stats_for_disconnected = {}
 
-    def disconnect(self, player_id):
-        return 0
-
     def leave(self, player_login):
+        # leave player from the game session
         self.players.remove(player_login)
         Players[player_login].sent_ships = 0
         for ship in self.ships:
@@ -56,9 +58,11 @@ class GameSession:
             self.newRound()
 
     def addPlayer(self, login):
+        # add new player to the game session
         self.players.append(login)
 
     def addShipsOfPlayer(self, id, ships):
+        # add ships of the given player
         for i in range(len(ships)):
             entity = ships[i].split(',')
             x = int(entity[0])
@@ -77,6 +81,7 @@ class GameSession:
         return 0
 
     def startGame(self):
+        # trigger start game event
         self.state = 1
         self.newRound()
         for player in self.players:
@@ -84,6 +89,7 @@ class GameSession:
         return 0
 
     def currentActivePlayers(self):
+        # returns the number of active players in to the game session (not 'Spectators' and not 'Disconnected')
         count = 0
         for player in Players:
             if player.type == "Player":
@@ -91,6 +97,7 @@ class GameSession:
         return count
 
     def newRound(self):
+        # trigger new round and set a player who must shoot
         self.hitconditions = {}
         self.curActive += 1
         self.curActive %= len(self.players)
@@ -100,6 +107,7 @@ class GameSession:
         return
 
     def makeHit(self, login, coordinate):
+        # for each player in the game session check if he wasn't hitted, was hitted or his ship was sinked
         hit_conditions = {}  # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_logins
         hit_conditions[login] = 3
         hitted_players = []
@@ -126,6 +134,7 @@ class GameSession:
         self.makeStats(hit_conditions, hitted_players, sinked_players, coordinate)
 
     def makeStats(self, hit_conditions, hitted_players, sinked_players, coordinate):
+        # prepare statistics messages for each player. This statistics will be written in the Game log
         self.hit_messages = dict.fromkeys(self.players, '')
         hitter = ''
         for player in self.players:
@@ -178,6 +187,7 @@ class GameSession:
         self.newRound()
 
     def checkEndGame(self):
+        # check if the ships on the battlefield  belong to one player
         owner = self.ships[0].owner_login
         for i in range(1, len(self.ships)):
             if self.ships[i].owner_login != owner:
@@ -186,6 +196,7 @@ class GameSession:
         return True
 
     def restartGame(self):
+        # rollback all initial attributes when master client deside to restart the game
         self.state = 0
         self.curActive = -1
         self.hit_messages = {}
@@ -196,6 +207,7 @@ class GameSession:
         return
 
 class Ship:
+    # class of ships objects
     def __init__(self, owner_login, length, coordinates):
         self.length = length
         self.coordinates = coordinates
@@ -203,13 +215,20 @@ class Ship:
 
 
 class Player:
+    # class of players objects
     def __init__(self, login, cor_id):
         self.login = login
         self.score = 0
-        self.type = 'Player'  # Player, Spectator, Leaved
+        self.type = 'Player'  # Player, Spectator, Disconnected, Just reconnected
         self.corID = cor_id
         self.sent_ships = 0
 
+# Players - dict which return the next: Players[player_login] ->Player object
+# CorrIDs - dict which return the next: CorIDs[player_cor_id] -> player login
+# GameSessions - dict which return the next: GameSessions[game-id] -> game session object
+# PlayerGame - dict which return the next: PlayerGame[player_cor_id] -> game session object id
+# clientNumOfShips - number of ships for each player
+# cur_message_time - dict which return the next: cur_message_time[player_cor_id] -> time of the last request
 
 Players = {}
 CorrIDs = {}
@@ -219,6 +238,7 @@ clientNumOfShips = 5
 cur_message_time = {}
 
 def setMessageTime(player_cor_id):
+    # set the message of the last request. Change the status of plaeyrs (Disconnected -> Just connected, Just connected -> Player)
     global cur_message_time
     cur_message_time[player_cor_id] = time.clock()
     #print cur_message_time
@@ -229,6 +249,8 @@ def setMessageTime(player_cor_id):
         Players[CorrIDs[player_cor_id]].type = 'Player'
 
 def checkClientDisconnect():
+    # Check if the last request was more than 5 seconds ago. If the master client choose new master client among active players.
+    # If the last request was more than 600 seconds delete player from the game session
     t = 5
     time_for_kick_out = 600
     for player_cor_id in cur_message_time:
@@ -261,8 +283,11 @@ def checkClientDisconnect():
 checkClientDisconnect()
 
 class Parser:
+    # class which parse clients requests
     @staticmethod
     def parse(request, cor_id):
+        # method which parse clients requests and return the respond which will be sent using RPC pattern. Protocol of parsing attached with the report
+        print request
         setMessageTime(cor_id)
         subrequests = request.split('#')
         if (len(subrequests) == 0):
@@ -427,6 +452,7 @@ class Parser:
 
 
 def on_request(ch, method, props, body):
+    # function which implements RPC. Response is a return of Parser.parse. This response publishes to the main queue
     request = str(body)
 
     response = Parser.parse(request, props.correlation_id)
