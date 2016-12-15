@@ -2,6 +2,22 @@ from battle_parser import *
 import uuid
 import pika
 
+"""
+#Class to specify the type of the client and send the appropriate requests
+
+
+# Main methods:
+
+    set_server_id --- bound the client to a given server
+
+    call - make a call using pika and rabbitMQ
+
+    after the method call:
+        all the methods that send a request and obtain the appropriate respone from the server
+        according to the protocol
+
+
+"""
 
 class Client:
     def __init__(self, type=0, server_ip='127.0.0.1'):
@@ -132,10 +148,24 @@ class Client:
     def master_confirm_game(self):
         confirmation = "8"
         server_ackn_master = self.call(confirmation)
-        print server_ackn_master
         return Parser.parse(server_ackn_master)
 
     def client_leave(self):
         leave_request = "10"
         server_leave_response = self.call(leave_request)
         return Parser.parse(server_leave_response)
+
+    def become_spectacular(self):
+        spectacular_request = "9"
+        server_spectacular_response = self.call(spectacular_request)
+        return Parser.parse(server_spectacular_response)
+
+    def restart_game_session(self, master, decision):
+        restart_request = "11#" + decision
+        server_restart_response = self.call(restart_request)
+        return Parser.parse(server_restart_response)
+
+    def who_is_master(self):
+        master_request = "12"
+        server_master_response = self.call(master_request)
+        return Parser.parse(server_master_response)

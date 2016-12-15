@@ -5,6 +5,26 @@ import tkMessageBox
 import threading
 import time
 
+"""
+
+# Class that allows the user to login to the game
+# Main methods:
+
+    choose_server --- choose the server from the listbox; update a listbox every 5 seconds;
+
+    set_board_size --- call the tkinter entry widget form and checks if the input value is ok.
+
+    initUI --- call the next window after the select server window, where the client see the list of avaliable game sessions
+    or create his own
+    after choosing a session create the instance of the class Board
+
+    get_nickname --- create the tkinter entry form, get user nickname, check if its free
+
+
+
+
+"""
+
 class Login(Frame):
     def __init__(self, root, client):
         self.server_id = ''
@@ -96,7 +116,9 @@ class Login(Frame):
                     self.client.set_type(1)
                     self.client.send_type(None, board_size)
                     root = Tk()
+
                     board = battle_board.Board(root, int(board_size), self.client)
+
 
                     board.initShipBoard()
                     board.initPositioning()
@@ -121,6 +143,7 @@ class Login(Frame):
                     self.client.send_type(game_id)
                     self.root.destroy()
                     root = Tk()
+                    
                     board = battle_board.Board(root, int(game_board_size), self.client)
                     board.initShipBoard()
                     board.initPositioning()
@@ -131,7 +154,6 @@ class Login(Frame):
 
         login_form = Frame(self.root)
         login_form.grid(row=0, column=0)
-
 
         def new_game():
             if (self.root):
