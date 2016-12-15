@@ -3,6 +3,22 @@ import uuid
 import pika
 
 
+"""
+#Class to specify the type of the client and send the appropriate requests
+
+# Main methods:
+
+    set_server_id --- bound the client to a given server
+
+    call - make a call using pika and rabbitMQ
+
+    after the method call:
+        all the methods that send a request and obtain the appropriate respone from the server
+        according to the protocol
+
+
+"""
+
 class Client:
     def __init__(self, type=0, server_ip='127.0.0.1'):
 
@@ -113,8 +129,16 @@ class Client:
     def new_round_check(self):
         new_round_request = "5"
         server_new_round_response = self.call(new_round_request)
-        print server_new_round_response, 'new round check'
         return Parser.parse(server_new_round_response)
+
+    def handle_shoot(self, isActive, x, y):
+        if isActive:
+            shoot_request = "4#" + str(x) + ',' + str(y)
+        else:
+            shoot_request = "4"
+        server_shoot_response = self.call(shoot_request)
+        return Parser.parse(server_shoot_response)
+
 
     def win_check(self):
         new_round_request = "6"
@@ -125,3 +149,23 @@ class Client:
         confirmation = "8"
         server_ackn_master = self.call(confirmation)
         return Parser.parse(server_ackn_master)
+
+    def client_leave(self):
+        leave_request = "10"
+        server_leave_response = self.call(leave_request)
+        return Parser.parse(server_leave_response)
+
+    def become_spectacular(self):
+        spectacular_request = "9"
+        server_spectacular_response = self.call(spectacular_request)
+        return Parser.parse(server_spectacular_response)
+
+    def restart_game_session(self, master, decision):
+        restart_request = "11#" + decision
+        server_restart_response = self.call(restart_request)
+        return Parser.parse(server_restart_response)
+
+    def who_is_master(self):
+        master_request = "12"
+        server_master_response = self.call(master_request)
+        return Parser.parse(server_master_response)

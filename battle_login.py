@@ -3,6 +3,27 @@ from battle_client import *
 from battle_board import *
 import tkMessageBox
 import threading
+import time
+
+"""
+
+# Class that allows the user to login to the game
+# Main methods:
+
+    choose_server --- choose the server from the listbox; update a listbox every 5 seconds;
+
+    set_board_size --- call the tkinter entry widget form and checks if the input value is ok.
+
+    initUI --- call the next window after the select server window, where the client see the list of avaliable game sessions
+    or create his own
+    after choosing a session create the instance of the class Board
+
+    get_nickname --- create the tkinter entry form, get user nickname, check if its free
+
+
+
+
+"""
 
 class Login(Frame):
     def __init__(self, root, client):
@@ -12,7 +33,9 @@ class Login(Frame):
         else:
             self.client = client
         self.root = root
-        self.root.title("Battleships!")
+        if (root):
+            self.root.title("Battleships!")
+        self.isServerChoosed = False
 
     def choose_server(self):
 
@@ -30,7 +53,9 @@ class Login(Frame):
         def choose_server():
             try:
                 server_id = avaliable_servers.get(avaliable_servers.curselection())
-                self.root.destroy()
+                self.isServerChoosed = True
+                if (self.root):
+                    self.root.destroy()
                 root = Tk()
                 self.client.set_server_id(server_id)
                 editor = Login(root, self.client)
@@ -44,6 +69,8 @@ class Login(Frame):
         server_select_button.grid(row=2, column=0, sticky=W+E)
 
         def get_avaliable_servers():
+            if self.isServerChoosed:
+                return
             try:
                 while True:
                     server_list = []
@@ -84,11 +111,13 @@ class Login(Frame):
             board_size = board_size_entry.get()
             try:
                 if 10 <= int(board_size) <= 40:
-                    self.root.destroy()
+                    if (self.root):
+                        self.root.destroy()
                     self.client.set_type(1)
                     self.client.send_type(None, board_size)
                     root = Tk()
                     board = Board(root, int(board_size), self.client)
+
                     board.initShipBoard()
                     board.initPositioning()
                     root.mainloop()
@@ -123,9 +152,9 @@ class Login(Frame):
         login_form = Frame(self.root)
         login_form.grid(row=0, column=0)
 
-
         def new_game():
-            self.root.destroy()
+            if (self.root):
+                self.root.destroy()
             root = Tk()
             editor = Login(root, self.client)
             editor.set_board_size()
@@ -180,7 +209,8 @@ class Login(Frame):
         nickname_button = Button(nickname_form, text='OK!', width=10, command=check_nickname)
         nickname_button.grid(row=1, column=0, sticky=E + W, columnspan=2)
 
-root = Tk()
-editor = Login(root, None)
-editor.choose_server()
-root.mainloop()
+if __name__ == "__main__":
+    root = Tk()
+    editor = Login(root, None)
+    editor.choose_server()
+    root.mainloop()
