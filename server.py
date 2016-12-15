@@ -145,10 +145,10 @@ class GameSession:
                     message = self.stats_for_disconnected[player].split('#')
                     message[2] =str(int(message[2]) + 1)
                     message[3] += ';' + str(coordinate[0]) + ',' + str(coordinate[1])
-                    message[4] += ','
-                    for p in sinked_players:
-                        message[4] += p + ','
-                    message[4] = message[4][:len(message[4]) - 1]
+                    #message[4] += ','
+                    #for p in sinked_players:
+                    #    message[4] += p + ','
+                    #message[4] = message[4][:len(message[4]) - 1]
                     self.stats_for_disconnected[player] = '#'.join(message)
 
         for player in self.players:
@@ -197,11 +197,15 @@ class GameSession:
 
     def restartGame(self):
         # rollback all initial attributes when master client deside to restart the game
+        for p in self.players:
+            if Players[p].sent_ships == 0:
+                return
         self.state = 0
         self.curActive = -1
         self.hit_messages = {}
         self.hitconditions = {}
         self.stats_for_disconnected = {}
+        self.ships = []
         for player in self.players:
             Players[player].sent_ships = 0
         return
@@ -394,7 +398,6 @@ class Parser:
                 return '6#-1'
             if GameSessions[game_session].checkEndGame() == True:
                 owner = GameSessions[game_session].ships[0].owner_login
-                GameSessions[game_session].ships = []
                 return '6#' + owner
             return '6#0'
 
@@ -444,12 +447,17 @@ class Parser:
                 return '11#-1'
             player_login = CorrIDs[cor_id]
             game_session = PlayerGame[cor_id]
-            if (len(subrequests) > 1 and GameSessions[game_session].master_client == player_login):
+            if (len(subrequests) > 1 and  player_login in GameSessions[game_session].players):
                 if (subrequests[1] != '1' and subrequests[1] != '2'):
                     return '11#-1'
-                GameSessions[game_session].restart = subrequests[1]
+                if (subrequests[1] == '1'):
+                    Players[player_login].type = 'Player'
+                    Players[player_login].sent_ships = 0
+                else:
+                    GameSessions[game_session].players.remove(player_login)
+                    Players[player_login].sent_ships = 0
                 GameSessions[game_session].restartGame()
-            return '11#' + str(GameSessions[game_session].restart)
+            return '11#1'
 
         if (subrequests[0] == '12'):
             game_session = PlayerGame[cor_id]
