@@ -108,7 +108,7 @@ class GameSession:
 
     def makeHit(self, login, coordinate):
         # for each player in the game session check if he wasn't hitted, was hitted or his ship was sinked
-        hit_conditions = {}  # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_logins
+        hit_conditions = dict.fromkeys(self.players, 0)  # values: 0 - missed, 1 - hitted, 2 - sinked, 3 - hiter; keys: players_logins
         hit_conditions[login] = 3
         hitted_players = []
         sinked_players = []
@@ -153,7 +153,7 @@ class GameSession:
 
         for player in self.players:
             self.hit_messages[player] = '4#'
-            if hit_conditions[player] == 3:
+            if hit_conditions[player] == 3 and Players[player].type != 'Spectator':
                 hitter = player
                 self.hit_messages[player] += '4#'
 
@@ -244,7 +244,7 @@ def setMessageTime(player_cor_id):
     #print cur_message_time
     if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Disconnected':
         Players[CorrIDs[player_cor_id]].type = 'Just_reconnected'
-        print "Player", CorrIDs[player_cor_id], "returned to the game"
+        #print "Player", CorrIDs[player_cor_id], "returned to the game"
     if player_cor_id in CorrIDs and Players[CorrIDs[player_cor_id]].type == 'Just_reconnected':
         Players[CorrIDs[player_cor_id]].type = 'Player'
 
@@ -266,10 +266,10 @@ def checkClientDisconnect():
                     if len(active_palyers) != 0:
                         new_master_client = choice(active_palyers)
                         GameSessions[PlayerGame[player_cor_id]].master_client = new_master_client
-                        print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
+                        #print "In Game session:", GameSessions[PlayerGame[player_cor_id]].id, "master changed on", GameSessions[PlayerGame[player_cor_id]].master_client
             if Players[CorrIDs[player_cor_id]].type != 'Disconnected' and Players[CorrIDs[player_cor_id]].type != 'Spectator':
                 Players[CorrIDs[player_cor_id]].type = 'Disconnected'
-                print "Player", CorrIDs[player_cor_id], "disconnected"
+                #print "Player", CorrIDs[player_cor_id], "disconnected"
             if (disconnect_time > time_for_kick_out):
                 game_session = PlayerGame[player_cor_id]
                 GameSessions[game_session].leave(CorrIDs[player_cor_id])
@@ -277,7 +277,7 @@ def checkClientDisconnect():
                 del CorrIDs[player_cor_id]
                 del PlayerGame[player_cor_id]
                 del cur_message_time[player_cor_id]
-                print "Player", CorrIDs[player_cor_id], "left the server(was disconnected for too long time)"
+                #print "Player", CorrIDs[player_cor_id], "left the server(was disconnected for too long time)"
     threading.Timer(t, checkClientDisconnect).start()
 
 checkClientDisconnect()
@@ -301,7 +301,7 @@ class Parser:
                 response = '0#0'
                 return response
             Players[request_name] = Player(request_name, cor_id)
-            print "Player", request_name, "connected"
+            #print "Player", request_name, "connected"
             CorrIDs[cor_id] = request_name
             response = '0#1'
             return response
@@ -384,6 +384,8 @@ class Parser:
             if ((not (game_session in GameSessions.keys())) or GameSessions[game_session].state == 0):
                 return '5#-1'
             active = GameSessions[game_session].curActive
+            if (GameSessions[game_session].players[active] in Players.keys() and Players[GameSessions[game_session].players[active]].type == 'Spectator'):
+                GameSessions[game_session].newRound()
             return '5#' + str(GameSessions[game_session].players[active])
 
         if (subrequests[0] == '6'):
@@ -415,14 +417,18 @@ class Parser:
         if (subrequests[0] == '9'):
             game_session = PlayerGame[cor_id]
             player_login = CorrIDs[cor_id]
+
+            #print 'gamesession = ', game_session
+            #print 'login = ', player_login
+
             if (not (cor_id in CorrIDs.keys())):
                 return '9#0'
             Players[player_login].type = 'Spectator'
-            if (player_login in GameSessions[game_session].hit_messages.keys):
+            if (player_login in GameSessions[game_session].hit_messages.keys()):
                 message = GameSessions[game_session].hit_messages[player_login][4:]
                 del GameSessions[game_session].hit_messages[player_login]
             else:
-                message = '1'
+                message = '-1'
             return '9#' + message
 
         if (subrequests[0] == '10'):
@@ -457,8 +463,11 @@ def on_request(ch, method, props, body):
 
     response = Parser.parse(request, props.correlation_id)
 
-    if (response[0] == '4'):
-        print 'response = ', response
+    #if request[0] == '9':
+    #    print response
+
+    #if request[0] == '6':
+    #   print response
 
     ch.basic_publish(exchange='',
                      routing_key=props.reply_to,
